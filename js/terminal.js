@@ -1,25 +1,38 @@
 (()=>{
-const{PR,PM,TEAMS,DICE,act,sub,lg,raid,craft,beat,init}=CC,$=s=>document.querySelector(s);
-const opt=TEAMS.map(t=>`<option>${t}</option>`).join('');
-['ht','at','vt','ft'].forEach(i=>$('#'+i).innerHTML=opt);$('#vt').selectedIndex=1;
-$('#fp').innerHTML=PR.map(p=>`<button data-p="${p.id}">${p.n}</button>`).join('');
-let sel='chip',st=localStorage.cc_st||'h';$('#stn').value=st;$('#nm').value=localStorage.cc_name||'';
-const res=(id,ok,t)=>{const e=$(id);e.hidden=false;e.className='res '+(ok?'ok':'no');e.textContent=t};
-function show(){$('#s-h').hidden=st!='h';$('#s-f').hidden=st!='f';document.querySelectorAll('[data-p]').forEach(b=>b.classList.toggle('on',b.dataset.p==sel))}
-function render(s){
-  const t=$('#ht').value,f=$('#ft').value,i=s.inv[f]||{},l=Object.keys(i).filter(k=>i[k]).map(k=>`${i[k]}× ${PM[k].n}`);
+const{PR,PM,TEAMS,DICE,PAT,SH,act,sub,lg,craft,patent,shield,raid,fw,trade,quote,pats,mmss,beat,init}=CC,$=s=>document.querySelector(s),R=Math.round;
+const ot=TEAMS.map(t=>`<option value="${t}">Team ${t}</option>`).join(''),op=a=>a.map(p=>`<option value="${p.id}">${p.n}</option>`).join('');
+$('#tm').innerHTML=ot;$('#vt').innerHTML=ot;$('#vt').selectedIndex=1;
+$('#fp').innerHTML=op(PR.filter(p=>p.rc));$('#pp').innerHTML=op(PR);$('#bp').innerHTML=op(PR);
+let hb=()=>{},st=localStorage.cc_st||'1';$('#stn').value=st;$('#nm').value=localStorage.cc_name||'';$('#tm').value=localStorage.cc_tm||TEAMS[0];
+const res=(id,r)=>{const e=$(id);e.hidden=false;e.className='res '+(r&&r.ok?'ok':'no');e.textContent=r?r.txt:''};
+const show=()=>{for(let i=1;i<5;i++)$('#s'+i).hidden=st!=i};
+function render(){
+  const s=CC.S,t=$('#tm').value,n=Date.now(),i=s.inv[t]||{},l=Object.keys(i).filter(k=>i[k]).map(k=>`${i[k]}× ${PM[k].n}`);
+  $('#rc').textContent='Rezept: '+Object.entries(PM[$('#fp').value].rc).map(([c,k])=>`${k}× ${PM[c].n}`).join(' + ');
+  $('#iv').textContent=`Konto Team ${t}: ${l.length?l.join(', '):'leer'}`;
   $('#lv').textContent=`Level ${s.lv[t]} · W${DICE[s.lv[t]]}`;
-  $('#iv').textContent=`Konto Team ${f}: ${l.length?l.join(', '):'noch leer'}`;
+  $('#shs').textContent=s.sh[t]>n?`🔒 Schild aktiv (${mmss(s.sh[t]-n)})`:'Kein Schild aktiv.';
+  const p=$('#pp').value;$('#pc').textContent=`Patentpreis ${PAT[p]} CC · Marktkurs ${R(s.pr[p].c)} CC`;
+  $('#pl').textContent=pats(s).map(x=>`📜 ${PM[x.id].n}: Team ${x.t} (${mmss(x.u-n)})`).join('\n');
+  const b=$('#bp').value,q=Math.max(1,Math.floor(+$('#bq').value||1)),m=s.pr[b].c,bu=quote(1,q,b,m),se=quote(-1,q,b,m),pt=s.pat[b],lock=pt&&pt.u>n&&pt.t!=t;
+  $('#bv').textContent=`Kurs ${R(m)} CC\nKauf ${q}×: ${R(bu.t)} CC (Kurs → ${R(bu.m)})\nVerkauf ${q}×: ${R(se.t)} CC (Kurs → ${R(se.m)}, inkl. 8 % Spread)`+(lock?`\n📜 Verkauf gesperrt: Patent von Team ${pt.t} (${mmss(pt.u-n)})`:'');
+  $('#bs').disabled=!!lock;
 }
-$('#nm').oninput=e=>localStorage.cc_name=e.target.value;
-$('#stn').onchange=e=>{st=localStorage.cc_st=e.target.value;show()};
-$('#ht').onchange=$('#ft').onchange=()=>render(CC.S);
-document.addEventListener('click',e=>{
-  const b=e.target.closest('button');if(!b)return;
-  if(b.dataset.p){sel=b.dataset.p;show()}
-  if(b.id=='lu'){const t=$('#ht').value;act(s=>{if(s.lv[t]<DICE.length-1){s.lv[t]++;lg(s,`🎓 Team ${t}: Level ${s.lv[t]} [W${DICE[s.lv[t]]}] freigeschaltet`)}})}
-  if(b.id=='rd'){const a=$('#at').value,v=$('#vt').value,r=a==v?{ok:0,txt:'Angreifer und Opfer müssen verschiedene Teams sein.'}:raid(a,v);res('#rs',r.ok,r.txt)}
-  if(b.id=='mk'){const t=$('#ft').value;craft(t,sel);res('#fr',1,`✔ ${PM[sel].n} im Konto von Team ${t} verbucht.`)}
+$('#nm').oninput=e=>{localStorage.cc_name=e.target.value;hb()};
+$('#tm').onchange=e=>{localStorage.cc_tm=e.target.value;render()};
+$('#stn').onchange=e=>{st=localStorage.cc_st=e.target.value;show();hb()};
+['fp','pp','bp','bq'].forEach(i=>$('#'+i).oninput=render);
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('button');if(!b)return;const t=$('#tm').value,i=b.id;
+  if(i=='mk')res('#r1',await craft(t,$('#fp').value));
+  if(i=='lu')res('#r2',await act(s=>{if(s.lv[t]>=DICE.length-1)return{ok:0,txt:'Maximales Level erreicht.'};s.lv[t]++;lg(s,`🎓 Team ${t}: Level ${s.lv[t]} [W${DICE[s.lv[t]]}]`);return{ok:1,txt:`✔ Level ${s.lv[t]} – W${DICE[s.lv[t]]} freigeschaltet.`}}));
+  if(i=='sb')res('#r2',await shield(t));
+  if(i=='rd')res('#r2',await raid(t,$('#vt').value));
+  if(i=='fw')res('#r2',await fw($('#vt').value));
+  if(i=='pb')res('#r3',await patent(t,$('#pp').value));
+  if(i=='bb'||i=='bs')res('#r4',await trade(i=='bb'?1:-1,+$('#bq').value,t,$('#bp').value));
+  render();
 });
-show();sub(render);init();beat(()=>st=='h'?'Hacker-Akademie':'Fabrik');
+show();sub(render);setInterval(render,1000);
+init().then(()=>{hb=beat(()=>['','Fabrik','Hacker-Akademie','Patentamt','Hauptbörse'][st])});
 })();

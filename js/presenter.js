@@ -1,6 +1,6 @@
 (()=>{
-const{PR,TEAMS,DICE,sub,tick,gtime,bant,stat,init}=CC,$=s=>document.querySelector(s),R=Math.round,L=n=>R(n).toLocaleString('de-DE');
-let cur=4,to=4,dv=PR[4].b;const prev={};
+const{PR,PM,TEAMS,DICE,sub,tick,gtime,bant,stat,mmss,init}=CC,$=s=>document.querySelector(s),R=Math.round,L=n=>R(n).toLocaleString('de-DE');
+let cur=PR.length-1,to=cur,dv=PR[cur].b;const prev={};
 
 function line(cv,pts,big){   // Canvas-Linienchart: big = Zeitachse+Raster, sonst Sparkline
   const d=devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return;
@@ -28,19 +28,22 @@ function frame(){   // Preis wird weich zum Zielwert getweent
   const h=s.hist[id].slice(-80);h[h.length-1]=[h[h.length-1][0],dv];h.push([Date.now(),dv]);
   line($('#mc'),h,1);$('#px').textContent=L(dv)+' CC';requestAnimationFrame(frame);
 }
-function rP(s){
+function rP(s){const n=Date.now();
   $('#pc').innerHTML=PR.map((p,i)=>{
-    const r=s.pr[p.id],d=(r.c/p.b-1)*100,t=r.c>r.p?'up':r.c<r.p?'dn':'',f=prev[p.id]!=null&&prev[p.id]!=r.c?(r.c>prev[p.id]?'fu':'fd'):'';prev[p.id]=r.c;
-    return`<div class="card pk${i==cur?' on':''}"><b>${p.n}</b><div class="p ${t} ${f}">${L(r.c)} CC</div><div class="${d>=0?'up':'dn'}">${t=='dn'?'▼':t=='up'?'▲':'■'} ${d>0?'+':''}${d.toLocaleString('de-DE',{maximumFractionDigits:1})} %</div><div class="sp"><canvas></canvas></div></div>`}).join('');
+    const r=s.pr[p.id],d=(r.c/p.b-1)*100,t=r.c>r.p?'up':r.c<r.p?'dn':'',f=prev[p.id]!=null&&prev[p.id]!=r.c?(r.c>prev[p.id]?'fu':'fd'):'',pt=s.pat[p.id];prev[p.id]=r.c;
+    const lk=pt&&pt.u>n?`<div class="lk" data-u="${pt.u}" data-t="${pt.t}">🔒 ${pt.t} ${mmss(pt.u-n)}</div>`:'<div class="lk"></div>';
+    return`<div class="card pk${i==cur?' on':''}"><b>${p.n}</b><div class="p ${t} ${f}">${L(r.c)} CC</div><div class="${d>=0?'up':'dn'}">${t=='dn'?'▼':t=='up'?'▲':'■'} ${d>0?'+':''}${d.toLocaleString('de-DE',{maximumFractionDigits:1})} %</div>${lk}<div class="sp"><canvas></canvas></div></div>`}).join('');
   document.querySelectorAll('.pk canvas').forEach((c,i)=>line(c,s.hist[PR[i].id].slice(-10),0));
 }
-const rT=s=>$('#pt').innerHTML=TEAMS.map(t=>{const[k,x]=stat(t);return`<div class="tm s-${k}"><span>TEAM ${t.toUpperCase()}<small>HACKER-LEVEL ${s.lv[t]} · W${DICE[s.lv[t]]}</small></span><b>${x}</b></div>`}).join('');
+const rT=s=>$('#pt').innerHTML=TEAMS.map(t=>{const[k,a]=stat(t);return`<div class="tm s-${k}"><span>TEAM ${t.toUpperCase()}<small>HACKER-LEVEL ${s.lv[t]} · W${DICE[s.lv[t]]}</small></span><b>${a.join('<br>')}</b></div>`}).join('');
 const rH=s=>{$('#gt').textContent=gtime(s);$('#gt').className=s.gt.lim&&CC.ge(s.gt)>=s.gt.lim*6e4?'dn':'';$('#wc').textContent=new Date().toLocaleTimeString('de-DE')};
 const rN=s=>{const t=bant(s);$('#bn').classList.toggle('on',!!t);if($('#bt').textContent!=t)$('#bt').textContent=t};
 
-$('#mt').textContent=PR[4].n;
-sub(s=>{rP(s);rT(s);rH(s);rN(s);if(!s.ch.auto&&s.ch.i!=to)go(s.ch.i)});
-setInterval(()=>{tick();const s=CC.S;rT(s);rH(s);rN(s)},500);
+const rPat=s=>{const l=CC.pats(s);$('#pp').innerHTML=l.length?l.map(x=>`<div class="pt">📜 <b>MONOPOL:</b> Team ${x.t} besitzt Patent auf ${PM[x.id].n} <b>[${mmss(x.u-Date.now())}]</b></div>`).join(''):'<div class="mut">Keine aktiven Patente.</div>'};
+function rK(){let x=0;document.querySelectorAll('.lk[data-u]').forEach(e=>{const m=e.dataset.u-Date.now();if(m<=0)x=1;else e.textContent=`🔒 ${e.dataset.t} ${mmss(m)}`});if(x)rP(CC.S)}
+$('#mt').textContent=PR[cur].n;
+sub(s=>{rP(s);rT(s);rPat(s);rH(s);rN(s);if(!s.ch.auto&&s.ch.i!=to)go(s.ch.i)});
+setInterval(()=>{tick();const s=CC.S;rT(s);rPat(s);rH(s);rN(s);rK()},500);
 setInterval(()=>{if(CC.S.ch.auto)go((to+1)%PR.length)},15000);   // Auto-Rotation alle 15 s
 addEventListener('resize',()=>rP(CC.S));
 addEventListener('keydown',e=>{if(e.key=='f')document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()});

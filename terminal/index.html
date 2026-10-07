@@ -1,7 +1,13 @@
 <!DOCTYPE html><html lang="de" class="sm"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Terminal · CodeClub Börse</title><link rel="stylesheet" href="../css/style.css"></head>
 <body class="tc">
-<div class="card"><input id="nm" placeholder="Dein Name (Betreuer)"><select id="stn"><option value="h">🔐 Station 1 · Hacker-Akademie</option><option value="f">🏭 Station 2 · Assembler / Fabrik</option></select><div class="mut cn"></div></div>
-<section id="s-h" class="card"><h2>Hacker-Level</h2><select id="ht"></select><div class="lvl" id="lv"></div><button id="lu" class="b-g">⬆ Level-Up (+1 Level)</button>
- <h2>Cyber-Angriff (Raid-Protokoll)</h2><select id="at"></select><select id="vt"></select><button id="rd" class="b-r">⚡ Angriff ausführen</button><div class="res" id="rs" hidden></div></section>
-<section id="s-f" class="card" hidden><h2>Assembler / Fabrik</h2><select id="ft"></select><div class="grid" id="fp"></div><button id="mk" class="b-g">🛠 Produkt herstellen</button><div class="res" id="fr" hidden></div><div class="mut" id="iv"></div></section>
+<div class="card"><input id="nm" placeholder="Dein Name (Betreuer)">
+ <select id="stn"><option value="1">🏭 Station 1 · Fabrik</option><option value="2">🔐 Station 2 · Hacker-Akademie</option><option value="3">📜 Station 3 · Patentamt</option><option value="4">📈 Station 4 · Hauptbörse</option></select>
+ <select id="tm" aria-label="Team"></select><div class="mut cn"></div></div>
+<section id="s1" class="card"><h2>Fabrik / Assembler</h2><select id="fp"></select><div class="mut" id="rc"></div><button id="mk" class="b-g">🛠 Produkt herstellen (Crafting)</button><div class="res" id="r1" hidden></div><div class="mut" id="iv"></div></section>
+<section id="s2" class="card" hidden><h2>Hacker-Akademie</h2><div class="lvl" id="lv"></div><button id="lu" class="b-g">⬆ Level-Up (+1 Level)</button>
+ <button id="sb" class="b-c">🔒 Cybersecurity-Lizenz kaufen (300 CC · 10 Min)</button><div class="mut" id="shs"></div>
+ <h2>Raid-Protokoll</h2><select id="vt" aria-label="Opfer-Team"></select><button id="rd" class="b-r">⚡ Angriff ausführen</button><button id="fw" class="b-o">🛡️ Firewall aktivieren (5 Min, Opfer-Team)</button><div class="res" id="r2" hidden></div></section>
+<section id="s3" class="card" hidden><h2>Patentamt</h2><select id="pp"></select><div class="mut" id="pc"></div><button id="pb" class="b-g">📜 Patent erwerben (8 Min Monopol)</button><div class="res" id="r3" hidden></div><div class="mut" id="pl" style="white-space:pre-line"></div></section>
+<section id="s4" class="card" hidden><h2>Hauptbörse</h2><select id="bp"></select><input id="bq" type="number" min="1" value="1" aria-label="Menge"><div id="bv" style="white-space:pre-line"></div>
+ <div class="row"><button id="bb" class="b-g">📈 Kauf</button><button id="bs" class="b-r">📉 Verkauf</button></div><div class="res" id="r4" hidden></div></section>
 <script src="../js/config.js"></script><script src="../js/core.js"></script><script src="../js/terminal.js"></script></body></html>
