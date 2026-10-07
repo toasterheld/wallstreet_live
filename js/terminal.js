@@ -6,16 +6,18 @@ $('#fp').innerHTML=op(PR.filter(p=>p.rc));$('#pp').innerHTML=op(PR);$('#bp').inn
 let hb=()=>{},st=localStorage.cc_st||'1';$('#stn').value=st;$('#nm').value=localStorage.cc_name||'';$('#tm').value=localStorage.cc_tm||TEAMS[0];
 const res=(id,r)=>{const e=$(id);e.hidden=false;e.className='res '+(r&&r.ok?'ok':'no');e.textContent=r?r.txt:''};
 const show=()=>{for(let i=1;i<5;i++)$('#s'+i).hidden=st!=i};
-function render(){
+const nm=t=>CC.nm(CC.S,t);
+function lab(){['tm','vt'].forEach(i=>document.querySelectorAll('#'+i+' option').forEach(o=>{const x=nm(o.value);if(o.textContent!==x)o.textContent=x}))}   // Teamnamen aus dem Admin
+function render(){lab();
   const s=CC.S,t=$('#tm').value,n=Date.now(),i=s.inv[t]||{},l=Object.keys(i).filter(k=>i[k]).map(k=>`${i[k]}× ${PM[k].n}`);
   $('#rc').textContent='Rezept: '+Object.entries(PM[$('#fp').value].rc).map(([c,k])=>`${k}× ${PM[c].n}`).join(' + ');
-  $('#iv').textContent=`Konto Team ${t}: ${l.length?l.join(', '):'leer'}`;
+  $('#iv').textContent=`Konto ${nm(t)}: ${l.length?l.join(', '):'leer'}`;
   $('#lv').textContent=`Level ${s.lv[t]} · W${DICE[s.lv[t]]}`;
   $('#shs').textContent=s.sh[t]>n?`🔒 Schild aktiv (${mmss(s.sh[t]-n)})`:'Kein Schild aktiv.';
   const p=$('#pp').value;$('#pc').textContent=`Patentpreis ${PAT[p]} CC · Marktkurs ${R(s.pr[p].c)} CC`;
-  $('#pl').textContent=pats(s).map(x=>`📜 ${PM[x.id].n}: Team ${x.t} (${mmss(x.u-n)})`).join('\n');
-  const b=$('#bp').value,q=Math.max(1,Math.floor(+$('#bq').value||1)),m=s.pr[b].c,bu=quote(1,q,b,m),se=quote(-1,q,b,m),pt=s.pat[b],lock=pt&&pt.u>n&&pt.t!=t;
-  $('#bv').textContent=`Kurs ${R(m)} CC\nKauf ${q}×: ${R(bu.t)} CC (Kurs → ${R(bu.m)})\nVerkauf ${q}×: ${R(se.t)} CC (Kurs → ${R(se.m)}, inkl. 8 % Spread)`+(lock?`\n📜 Verkauf gesperrt: Patent von Team ${pt.t} (${mmss(pt.u-n)})`:'');
+  $('#pl').textContent=pats(s).map(x=>`📜 ${PM[x.id].n}: ${nm(x.t)} (${mmss(x.u-n)})`).join('\n');
+  const b=$('#bp').value,q=Math.max(1,Math.floor(+$('#bq').value||1)),m=s.pr[b].c,fz=CC.frozen(s,b),bu=quote(1,q,b,m,fz),se=quote(-1,q,b,m,fz),pt=s.pat[b],lock=pt&&pt.u>n&&pt.t!=t;
+  $('#bv').textContent=`Kurs ${R(m)} CC${fz?' ❄ eingefroren':''}\nKauf ${q}×: ${R(bu.t)} CC (Kurs → ${R(bu.m)})\nVerkauf ${q}×: ${R(se.t)} CC (Kurs → ${R(se.m)}, inkl. 8 % Spread)`+(lock?`\n📜 Verkauf gesperrt: Patent von ${nm(pt.t)} (${mmss(pt.u-n)})`:'');
   $('#bs').disabled=!!lock;
 }
 $('#nm').oninput=e=>{localStorage.cc_name=e.target.value;hb()};

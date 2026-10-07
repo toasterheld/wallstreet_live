@@ -1,5 +1,5 @@
 (()=>{
-const{PR,PM,TEAMS,DICE,sub,tick,gtime,bant,stat,mmss,init}=CC,$=s=>document.querySelector(s),R=Math.round,L=n=>R(n).toLocaleString('de-DE');
+const{PR,PM,TEAMS,DICE,sub,tick,gtime,bant,stat,mmss,esc,nm,members,init}=CC,$=s=>document.querySelector(s),R=Math.round,L=n=>R(n).toLocaleString('de-DE');
 let cur=PR.length-1,to=cur,dv=PR[cur].b;const prev={};
 
 function line(cv,pts,big){   // Canvas-Linienchart: big = Zeitachse+Raster, sonst Sparkline
@@ -28,19 +28,20 @@ function frame(){   // Preis wird weich zum Zielwert getweent
   const h=s.hist[id].slice(-80);h[h.length-1]=[h[h.length-1][0],dv];h.push([Date.now(),dv]);
   line($('#mc'),h,1);$('#px').textContent=L(dv)+' CC';requestAnimationFrame(frame);
 }
+const lkT=(z,u,name)=>`${z?'❄ ':''}🔒 ${mmss(u-Date.now())} ${name}`;   // Countdown zuerst, damit lange Teamnamen abgeschnitten werden – nie die Zeit
 function rP(s){const n=Date.now();
   $('#pc').innerHTML=PR.map((p,i)=>{
     const r=s.pr[p.id],d=(r.c/p.b-1)*100,t=r.c>r.p?'up':r.c<r.p?'dn':'',f=prev[p.id]!=null&&prev[p.id]!=r.c?(r.c>prev[p.id]?'fu':'fd'):'',pt=s.pat[p.id];prev[p.id]=r.c;
-    const lk=pt&&pt.u>n?`<div class="lk" data-u="${pt.u}" data-t="${pt.t}">🔒 ${pt.t} ${mmss(pt.u-n)}</div>`:'<div class="lk"></div>';
+    const fz=CC.frozen(s,p.id),lk=pt&&pt.u>n?`<div class="lk" data-u="${pt.u}" data-n="${esc(nm(s,pt.t))}" data-z="${fz?1:0}">${esc(lkT(fz,pt.u,nm(s,pt.t)))}</div>`:fz?'<div class="lk">❄ EINGEFROREN</div>':'<div class="lk"></div>';
     return`<div class="card pk${i==cur?' on':''}"><b>${p.n}</b><div class="p ${t} ${f}">${L(r.c)} CC</div><div class="${d>=0?'up':'dn'}">${t=='dn'?'▼':t=='up'?'▲':'■'} ${d>0?'+':''}${d.toLocaleString('de-DE',{maximumFractionDigits:1})} %</div>${lk}<div class="sp"><canvas></canvas></div></div>`}).join('');
   document.querySelectorAll('.pk canvas').forEach((c,i)=>line(c,s.hist[PR[i].id].slice(-10),0));
 }
-const rT=s=>$('#pt').innerHTML=TEAMS.map(t=>{const[k,a]=stat(t);return`<div class="tm s-${k}"><span>TEAM ${t.toUpperCase()}<small>HACKER-LEVEL ${s.lv[t]} · W${DICE[s.lv[t]]}</small></span><b>${a.join('<br>')}</b></div>`}).join('');
+const rT=s=>$('#pt').innerHTML=TEAMS.map(t=>{const[k,a]=stat(t),m=members(s,t);return`<div class="tm s-${k}"><div class="h1"><span class="tn">${esc(nm(s,t))} <small>LEVEL ${s.lv[t]} · W${DICE[s.lv[t]]}</small></span><b>${a.join('<br>')}</b></div>${m.length?`<div class="mb">${m.map(esc).join(' · ')}</div>`:''}</div>`}).join('');
 const rH=s=>{$('#gt').textContent=gtime(s);$('#gt').className=s.gt.lim&&CC.ge(s.gt)>=s.gt.lim*6e4?'dn':'';$('#wc').textContent=new Date().toLocaleTimeString('de-DE')};
 const rN=s=>{const t=bant(s);$('#bn').classList.toggle('on',!!t);if($('#bt').textContent!=t)$('#bt').textContent=t};
 
-const rPat=s=>{const l=CC.pats(s);$('#pp').innerHTML=l.length?l.map(x=>`<div class="pt">📜 <b>MONOPOL:</b> Team ${x.t} besitzt Patent auf ${PM[x.id].n} <b>[${mmss(x.u-Date.now())}]</b></div>`).join(''):'<div class="mut">Keine aktiven Patente.</div>'};
-function rK(){let x=0;document.querySelectorAll('.lk[data-u]').forEach(e=>{const m=e.dataset.u-Date.now();if(m<=0)x=1;else e.textContent=`🔒 ${e.dataset.t} ${mmss(m)}`});if(x)rP(CC.S)}
+const rPat=s=>{const l=CC.pats(s);$('#pp').innerHTML=l.length?l.map(x=>`<div class="pt">📜 <b>MONOPOL:</b> ${esc(nm(s,x.t))} – Patent auf ${PM[x.id].n} <b>[${mmss(x.u-Date.now())}]</b></div>`).join(''):'<div class="mut">Keine aktiven Patente.</div>'};
+function rK(){let x=0;document.querySelectorAll('.lk[data-u]').forEach(e=>{const m=e.dataset.u-Date.now();if(m<=0)x=1;else e.textContent=lkT(e.dataset.z=='1',+e.dataset.u,e.dataset.n)});if(x)rP(CC.S)}
 $('#mt').textContent=PR[cur].n;
 sub(s=>{rP(s);rT(s);rPat(s);rH(s);rN(s);if(!s.ch.auto&&s.ch.i!=to)go(s.ch.i)});
 setInterval(()=>{tick();const s=CC.S;rT(s);rPat(s);rH(s);rN(s);rK()},500);
