@@ -1,0 +1,21 @@
+<!DOCTYPE html><html lang="de" class="sm"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin · CodeClub Börse</title><link rel="stylesheet" href="../css/style.css"></head>
+<body>
+<nav class="nav"><b>🎛️ ADMIN</b><a href="../presenter/" target="_blank">📺 Presenter</a><a href="../terminal/" target="_blank">📱 Terminal</a><span class="mut cn"></span></nav>
+<section class="adm">
+ <div class="card"><h2>A · Börsenschalter</h2>
+  <div class="row"><select id="tt"></select><select id="tp"></select></div>
+  <div class="row"><input id="tq" type="number" min="1" value="1" aria-label="Menge"><button id="buy" class="b-g">📈 Kauf</button><button id="sell" class="b-r">📉 Verkauf</button></div>
+  <div id="fb" class="mut" aria-live="polite">&nbsp;</div><table id="ap"></table><div class="log" id="lg"></div></div>
+ <div class="card"><h2>B · Teams: Status, Firewall &amp; Hacker-Level</h2><div id="at"></div></div>
+ <div class="card"><h2>C · Eilmeldungen &amp; Markt-Events</h2>
+  <div class="row"><button class="b-o" data-ev="chip">⚠️ Chip-Krise (+30 %)</button><button class="b-o" data-ev="pow">⚡ Stromausfall (60 s)</button></div>
+  <div class="row"><button class="b-r" data-ev="crash">📉 Wall Street Crash (−25 %)</button><button class="b-g" data-ev="ai">🚀 AI-Boom (+50 %)</button></div>
+  <div class="row"><input id="ct" placeholder="Eigene Eilmeldung …" maxlength="140"><button id="cust" class="b-c" style="flex:0 0 auto">Senden</button></div>
+  <button id="clr" class="b-r">✖ Eilmeldung löschen</button><div id="cur" class="mut"></div></div>
+ <div class="card"><h2>📊 Beamer-Chart</h2><button id="ar"></button><div class="row" id="cb"></div></div>
+ <div class="card"><h2>📱 Aktive Terminals</h2><div id="tl2"></div></div>
+ <div class="card"><h2>Spielzeit</h2><div class="lvl" id="agt">00:00</div>
+  <div class="row"><button id="gs" class="b-g">▶ Start</button><button id="gp" class="b-o">⏸ Pause</button><button id="gr">↺ Reset</button></div>
+  <label class="mut">Dauer in Min (0 = hochzählen) <input id="tl" type="number" min="0"></label><button id="rst" class="b-r">⚠ Alles zurücksetzen</button></div>
+</section>
+<script src="../js/config.js"></script><script src="../js/core.js"></script><script src="../js/admin.js"></script></body></html>
