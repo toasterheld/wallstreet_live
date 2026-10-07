@@ -2,7 +2,7 @@
 window.firebaseConfig={
   apiKey:"",
   authDomain:"",
-  databaseURL:"",   // z.B. "https://mein-projekt-default-rtdb.europe-west1.firebasedatabase.app"
+  databaseURL:"https://wallstreet-live-default-rtdb.europe-west1.firebasedatabase.app/",   // z.B. "https://mein-projekt-default-rtdb.europe-west1.firebasedatabase.app"
   projectId:"",
   appId:""
 };
