@@ -103,3 +103,7 @@ button:disabled{opacity:.35;cursor:not-allowed;filter:grayscale(.8);box-shadow:n
 #pt.many{display:grid;grid-template-columns:1fr 1fr;gap:.3em;align-content:start}#pt.many .tm{margin:0;min-width:0}
 #pt.many .tm .h1{flex-wrap:wrap;gap:.1em .5em}
 .mn.wide{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+.bpr{display:flex;flex-wrap:wrap;gap:.4em;align-items:center;font-size:.9em}.bpr button{padding:.25em .6em;font-size:.85em}
+.accb+.accb{margin-top:.5em}
+.chk{display:flex;align-items:center;gap:.6em;padding:.45em .2em;color:var(--text,inherit)}.chk input{width:1.4em;height:1.4em;flex:0 0 auto;margin:0}.chk input:disabled+*,.chk:has(input:disabled){opacity:.5}
+#ah{white-space:pre-line}

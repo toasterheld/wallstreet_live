@@ -2,7 +2,7 @@
 window.firebaseConfig={
   apiKey:"",
   authDomain:"",
-  databaseURL:"https://wallstreet-live-default-rtdb.europe-west1.firebasedatabase.app/",   // z.B. "https://mein-projekt-default-rtdb.europe-west1.firebasedatabase.app"
+  databaseURL:"",   // z.B. "https://mein-projekt-default-rtdb.europe-west1.firebasedatabase.app"
   projectId:"",
   appId:""
 };
@@ -13,7 +13,8 @@ window.CC_CONFIG={
   shieldCost:300,         // Cybersecurity-Lizenz (10 Min)
   startCap:500,           // Startkapital je Team in CC (im Admin-Board änderbar)
   levelCost:[100,200,300,400],   // Hacker-Akademie: Preis für Level 0→1, 1→2, 2→3, 3→4
-  painMoney:50,           // Schmerzensgeld: Opfer ohne Cybersecurity-Schild zahlt das an den erfolgreichen Angreifer
+  painMoney:50,           // Vorgabewert für „Angriff melden“ (Lösegeld in CC, am Terminal änderbar)
+  blueprintCost:{2:300,3:800},   // Blueprint-Händler: Preis Level 2 / Level 3 in CC (zusätzlich im Admin änderbar)
   maxTeams:16,            // Obergrenze für die Team-Anzahl im Admin-Board
   patent:{si:100,cu:100,en:120,se:200,chip:300,coil:250,mb:500,gpu:600,ai:800},   // Patentpreise (8 Min Monopol)
   // Markt-Events. min = Laufzeit in Minuten. mul = Preisfaktor je Produkt ('*' = alle), fz = Preis eingefroren,

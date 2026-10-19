@@ -40,7 +40,7 @@ const accCard=t=>{t=esc(t);return el(`<div class="ac" data-id="${t}"><div class=
 <div class="row"><button class="b-r" data-adj="-100" data-t="${t}">−100 CC</button><button class="b-g" data-adj="100" data-t="${t}">+100 CC</button></div>
 <div class="row"><input type="number" min="0" step="1" data-bi="${t}" placeholder="Betrag" aria-label="Kontostand setzen"><button data-set="${t}">Setzen</button></div></div>`)};
 const teamRow=t=>{t=esc(t);return el(`<div class="trow" data-id="${t}"><div class="th"><b class="ix"></b><input class="tin" data-t="${t}" data-f="n" maxlength="24" placeholder="Teamname, z. B. Cyber-Hawks" aria-label="Teamname"></div>
-<input class="tmi" data-t="${t}" data-f="m" maxlength="140" placeholder="Mitglieder: Jan, Alex, Sarah, Tom, Mia" aria-label="Mitglieder"><div class="stl"><span class="st" data-t="${t}"></span></div><div class="bt">
+<input class="tmi" data-t="${t}" data-f="m" maxlength="140" placeholder="Mitglieder: Jan, Alex, Sarah, Tom, Mia" aria-label="Mitglieder"><div class="stl"><span class="st" data-t="${t}"></span></div><div class="bpr"><span class="mut">🗺 Blueprints:</span><button data-bpt="2" data-t="${t}"></button><button data-bpt="3" data-t="${t}"></button></div><div class="bt">
 <button class="b-o" data-a="fw" data-t="${t}">🛡️ Firewall&nbsp;(5&nbsp;Min)</button><button class="b-r" data-a="hk" data-t="${t}">💀 Gesperrt/<wbr>Gehackt&nbsp;(3&nbsp;Min)</button><button class="b-g" data-a="ok" data-t="${t}">↺ Reset</button><button class="b-r" data-del="${t}">🗑 Team löschen</button></div></div>`)};
 let tsig='';function syncSel(s){const g=s.tl.map(t=>t+'\u0001'+nm(s,t)).join('\u0002');if(g===tsig)return;tsig=g;
   const v=$('#tt').value;$('#tt').innerHTML=s.tl.map(t=>`<option value="${esc(t)}">${esc(nm(s,t))}</option>`).join('');if(s.tl.includes(v))$('#tt').value=v}
@@ -59,6 +59,8 @@ document.addEventListener('click',e=>{
   if(d.end)CC.stopEv(d.end).then(r=>evm(r.txt));
   if(d.adj)CC.adjBal(d.t,+d.adj).then(r=>am(r.txt));
   if(d.set){const x=$(`[data-bi="${d.set}"]`);CC.setBal(d.set,x.value).then(r=>{am(r.txt);if(r.ok)x.value=''})}
+  if(d.bpt){const o=!!((CC.S.bp[d.t]||{})[d.bpt]);CC.setBp(d.t,+d.bpt,!o).then(r=>tmm(r.txt))}
+  if(i=='bpb')Promise.all([CC.setBpCost(2,$('#bp2').value),CC.setBpCost(3,$('#bp3').value)]).then(r=>am(r.every(x=>x.ok)?`✔ Blueprint-Preise: Level 2 ${CC.fmt(CC.S.bpc[2])} CC · Level 3 ${CC.fmt(CC.S.bpc[3])} CC`:r.find(x=>!x.ok).txt));
   if(i=='capb')CC.setCap($('#cap').value).then(r=>am(r.txt));
   if(i=='rsb'&&confirm(`Alle Konten auf Startkapital (${CC.fmt(CC.S.cap)} CC) zurücksetzen?\n\nDie aktuellen Kontostände aller Teams gehen verloren.`))CC.resetBal().then(r=>am(r.txt));
   if(i=='rk')CC.setRank(!CC.S.rk);
@@ -73,7 +75,7 @@ document.addEventListener('click',e=>{
   if(i=='gp')act(s=>{if(s.gt.run){s.gt.el+=Date.now()-s.gt.run;s.gt.run=0}});
   if(i=='gr')act(s=>{s.gt.el=0;s.gt.run=0});
   if(i=='rst'&&confirm('Neue Spielrunde starten?\n\nPreise, Level, Patente, Events (alle wieder freigeschaltet) und Spielzeit werden zurückgesetzt. Alle Konten gehen auf das Startkapital. Teams (Namen, Mitglieder) und das Startkapital bleiben erhalten.'))
-    act(s=>{const keep=s.nm,sf=s.sfx,rk=s.rk,nx=s.nx,tl=s.tl.slice();Object.assign(s,CC.fresh(s.cap,tl),{nm:keep,sfx:sf,rk,nx});lg(s,'Neue Spielrunde gestartet')});
+    act(s=>{const keep=s.nm,sf=s.sfx,rk=s.rk,nx=s.nx,tl=s.tl.slice(),bpc=s.bpc;Object.assign(s,CC.fresh(s.cap,tl),{nm:keep,sfx:sf,rk,nx,bpc});lg(s,'Neue Spielrunde gestartet')});
 });
 $('#at').addEventListener('change',e=>{const i=e.target.closest('[data-f]');if(i)CC.setTeam(i.dataset.t,i.dataset.f,i.value)});   // Name/Mitglieder speichern beim Verlassen des Feldes
 $('#tl').addEventListener('change',()=>act(s=>{s.gt.lim=Math.max(0,+$('#tl').value||0)}));
@@ -89,6 +91,8 @@ function render(s){
   Q('.tin,.tmi').forEach(e=>{if(document.activeElement!==e){const v=(s.nm[e.dataset.t]||{})[e.dataset.f]||'';if(e.value!==v)e.value=v}});
   Q('[data-an]').forEach(e=>{const x=nm(s,e.dataset.an);if(e.textContent!==x)e.textContent=x});
   Q('[data-av]').forEach(e=>{const x='💰 '+CC.fmt(CC.bal(s,e.dataset.av))+' CC';if(e.textContent!==x)e.textContent=x});
+  [2,3].forEach(l=>{if(document.activeElement!==$('#bp'+l))$('#bp'+l).value=s.bpc[l]});
+  Q('[data-bpt]').forEach(b=>{const own=!!((s.bp[b.dataset.t]||{})[b.dataset.bpt]),x=`Level ${b.dataset.bpt} ${own?'✔ gekauft':'– nein'}`;if(b.textContent!==x){b.textContent=x;b.className=own?'b-g':''}});
   if(document.activeElement!==$('#cap'))$('#cap').value=s.cap;
   $('#rsb').textContent=`↺ Alle Konten auf Startkapital (${CC.fmt(s.cap)} CC) zurücksetzen`;
   $('#rk').textContent='🏆 Beamer: Rangliste nach Guthaben sortieren: '+(s.rk?'AN':'AUS');$('#rk').className=s.rk?'b-g':'';

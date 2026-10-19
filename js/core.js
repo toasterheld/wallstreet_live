@@ -7,20 +7,21 @@ const PR=[['si','Silizium',40],['cu','Kupfer',35],['en','Energie / Strom',50],['
   ['mb','Mainboard',450,{chip:1,coil:2}],['gpu','High-End GPU',600,{chip:2,se:1}],['ai','AI-Supercomputer',1800,{mb:1,gpu:1,en:2}]
 ].map(([id,n,b,rc])=>({id,n,b,rc:rc||null}));
 const PM=Object.fromEntries(PR.map(p=>[p.id,p])),DICE=C.dice||[2,4,6,8,12];
-const CAP=C.startCap==null?500:C.startCap,LVC=C.levelCost||[100,200,300,400],PAIN=C.painMoney==null?50:C.painMoney,MAXT=C.maxTeams||16;
+const CAP=C.startCap==null?500:C.startCap,LVC=C.levelCost||[100,200,300,400],PAIN=C.painMoney==null?50:C.painMoney,MAXT=C.maxTeams||16,BPC0=Object.assign({2:300,3:800},C.blueprintCost||{}),BPN={2:'Mainboard · High-End GPU',3:'AI-Supercomputer'};
 const EVL=C.events||[],EVD=Object.fromEntries(EVL.map(e=>[e.id,e]));
 // Teams sind dynamisch: s.tl = geordnete Liste der Team-IDs, alle Team-Daten hängen als Maps (bal, tm, sh, lv, nm) an dieser ID.
 // Es gibt KEIN digitales Inventar – Waren wandern physisch über Produktkarten, das System kennt nur Geld, Preise, Patente, Level und Schilde.
 const START_TEAMS=['Alpha','Bravo','Charlie','Delta','Echo'];
-const addMaps=(s,t,cap)=>{s.bal[t]=cap;s.tm[t]={k:'ok',u:0};s.sh[t]=0;s.lv[t]=0;s.nm[t]={n:'',m:''}};
+const addMaps=(s,t,cap)=>{s.bp[t]={};s.bal[t]=cap;s.tm[t]={k:'ok',u:0};s.sh[t]=0;s.lv[t]=0;s.nm[t]={n:'',m:''}};
 const fresh=(cap,tl)=>{cap=cap==null?CAP:cap;tl=(tl||START_TEAMS).slice();
-  const s={bal:{},tm:{},sh:{},lv:{},nm:{},tl,nx:tl.length+1,cap,rk:1,pr:Object.fromEntries(PR.map(p=>[p.id,{c:p.b,p:p.b}])),hist:Object.fromEntries(PR.map(p=>[p.id,[[Date.now(),p.b]]])),
+  const s={bal:{},bp:{},bpc:{2:BPC0[2],3:BPC0[3]},tm:{},sh:{},lv:{},nm:{},tl,nx:tl.length+1,cap,rk:1,pr:Object.fromEntries(PR.map(p=>[p.id,{c:p.b,p:p.b}])),hist:Object.fromEntries(PR.map(p=>[p.id,[[Date.now(),p.b]]])),
   pat:{},ev:{},evd:{},bn:'',gt:{lim:60,el:0,run:0},ch:{i:PR.length-1,auto:true},sfx:{n:0,k:'',t:0},lg:[]};
   tl.forEach(t=>addMaps(s,t,cap));return s};
 // Gespeicherten Spielstand einlesen: alte Stände (ohne Teamliste, mit Inventar) werden automatisch migriert
 const norm=s=>{delete s.inv;if(!Array.isArray(s.tl)||!s.tl.length)s.tl=START_TEAMS.slice();
-  for(const m of['bal','tm','sh','lv','nm'])if(!s[m]||typeof s[m]!='object')s[m]={};
-  for(const t of s.tl)if(s.bal[t]==null||!s.tm[t]||s.sh[t]==null||s.lv[t]==null||!s.nm[t]){const o={bal:{},tm:{},sh:{},lv:{},nm:{}};addMaps(o,t,s.cap==null?CAP:s.cap);
+  for(const m of['bal','tm','sh','lv','nm','bp'])if(!s[m]||typeof s[m]!='object')s[m]={};
+  if(!s.bpc||!(s.bpc[2]>=0)||!(s.bpc[3]>=0))s.bpc={2:BPC0[2],3:BPC0[3]};
+  for(const t of s.tl)if(s.bal[t]==null||!s.tm[t]||s.sh[t]==null||s.lv[t]==null||!s.nm[t]||!s.bp[t]){const o={bal:{},tm:{},sh:{},lv:{},nm:{},bp:{}};addMaps(o,t,s.cap==null?CAP:s.cap);
     for(const m in o)if(s[m][t]==null)s[m][t]=o[m][t]}
   if(!(s.nx>0))s.nx=s.tl.length+1;return s};
 const parse=v=>{const j=typeof v=='string'?JSON.parse(v):(v||{});
@@ -134,19 +135,18 @@ const levelUp=t=>act(s=>{if(!has(s,t))return NOTEAM();const L=s.lv[t];
   s.bal[t]=bal(s,t)-c;s.lv[t]=L+1;lg(s,`🎓 ${nm(s,t)}: Level ${L+1} [W${DICE[L+1]}] (−${c} CC)`);
   return Y(`✔ Level ${L+1} – W${DICE[L+1]} freigeschaltet. ${c} CC abgebucht, Guthaben ${fmt(s.bal[t])} CC.`)});
 const fw=t=>act(s=>{if(!has(s,t))return NOTEAM();s.tm[t]={k:'fw',u:Date.now()+3e5};sfx(s,'glitch');lg(s,`🛡️ Firewall 5 Min für ${nm(s,t)}`);return Y(`✔ Firewall für ${nm(s,t)} läuft (5 Min).`)});
-const ri=n=>1+Math.floor(Math.random()*n);
-const raid=(a,v)=>act(s=>{if(!has(s,a)||!has(s,v))return NOTEAM();const n=Date.now(),na=nm(s,a),nv=nm(s,v);
-  if(a==v)return N('Angreifer und Opfer müssen verschiedene Teams sein.');
-  if(s.tm[v].u>n)return N(`🛡️ ${nv} hat bereits Firewall/Sperre – kein Angriff möglich.`);
-  const A=DICE[s.lv[a]],V=DICE[s.lv[v]],x=ri(A),y=ri(V),w=x>y,sh=s.sh[v]>n;   // Gleichstand = Abwehr
-  let m=`${na} (W${A}): ${x}  vs.  ${nv} (W${V}): ${y}\n`,ok=0;
-  if(!w)m+='✖ ANGRIFF ABGEWEHRT';
-  else if(sh)m+=`🔒 Angriff gelang, aber das Cybersecurity-Schild von ${nv} verhindert den Rohstoffverlust – ${na} geht leer aus!`;
-  else{ok=1;m+=`✔ ANGRIFF ERFOLGREICH – ${na} darf Rohstoffe von ${nv} nehmen. 5-Min-Firewall für ${nv} läuft!`;s.tm[v]={k:'fw',u:n+3e5};sfx(s,'glitch');
-    const pm=Math.min(PAIN,bal(s,v));                                                  // Schmerzensgeld: Umbuchung Opfer → Angreifer (höchstens das vorhandene Guthaben)
-    s.bal[v]=bal(s,v)-pm;s.bal[a]=bal(s,a)+pm;
-    m+=`\n💸 ${nv} zahlt ${pm} CC Schmerzensgeld an ${na}`+(pm<PAIN?` (mehr hatte das Team nicht).`:'.');lg(s,`💸 ${nv} → ${na}: ${pm} CC Schmerzensgeld`)}
-  lg(s,`⚡ ${na} → ${nv}: ${ok?'Erfolg':w?'vom Schild geblockt':'abgewehrt'} (${x} vs ${y})`);return{ok,txt:m}});
+// Hacker-Akademie: KEINE digitalen Angriffe/Würfel-Duelle. Gewürfelt wird manuell auf dem Feld.
+// „Angriff melden“: Der Betreuer bucht nur den Schaden des geschädigten Teams (wer angegriffen hat, ist dem System egal).
+// o = {ransom: CC-Lösegeld (höchstens das Guthaben), shield: Cybersecurity-Lizenz entziehen, fw: 5-Min-Firewall}
+const reportAttack=(t,o)=>act(s=>{if(!has(s,t))return NOTEAM();o=o||{};const n=Date.now(),name=nm(s,t),r=Math.floor(Number(o.ransom)||0);
+  if(r<0||r>1e7)return N('Lösegeld: Betrag zwischen 0 und 10.000.000 CC eingeben.');
+  const p=[];
+  if(r>0){const pay=Math.min(r,bal(s,t));s.bal[t]=bal(s,t)-pay;p.push(`−${fmt(pay)} CC Lösegeld`+(pay<r?` (mehr hatte das Team nicht, gefordert: ${fmt(r)} CC)`:''))}
+  if(o.shield){if(s.sh[t]>n){s.sh[t]=0;p.push('Cybersecurity-Lizenz entzogen')}else p.push('keine aktive Lizenz zum Entziehen')}
+  if(o.fw){s.tm[t]={k:'fw',u:n+3e5};p.push('5-Min-Firewall')}
+  if(!r&&!o.fw&&!(o.shield&&p.some(x=>x.includes('entzogen'))))return N('Nichts zu buchen: Lösegeld eingeben, Lizenz entziehen oder Firewall wählen.');
+  sfx(s,'glitch');lg(s,`🚨 Angriff gemeldet – ${name}: ${p.join(', ')}`);
+  return Y(`✔ Angriff gebucht für ${name}: ${p.join(', ')}. Guthaben ${fmt(bal(s,t))} CC.`)});
 // Teamname / Mitglieder (f = 'n' | 'm')
 const setTeam=(t,f,v)=>act(s=>{if(!has(s,t))return NOTEAM();s.nm[t][f]=String(v).slice(0,f=='n'?24:140);return Y('✔ gespeichert')});
 
@@ -157,6 +157,15 @@ const setBal=(t,v)=>act(s=>{if(!has(s,t))return NOTEAM();const x=String(v).trim(
 const resetBal=()=>act(s=>{for(const t of s.tl)s.bal[t]=Math.max(0,Math.floor(s.cap));lg(s,`💰 Alle Konten auf Startkapital ${s.cap} CC gesetzt`);return Y(`✔ Alle Konten: ${fmt(s.cap)} CC`)});
 const setCap=v=>act(s=>{const x=String(v).trim()===''?NaN:Math.floor(Number(v));if(!(x>=0)||x>1e7)return N('Startkapital: Betrag ≥ 0 eingeben.');s.cap=x;return Y(`✔ Startkapital: ${fmt(x)} CC (gilt ab dem nächsten Reset)`)});
 const setRank=on=>act(s=>{s.rk=on?1:0;return Y(on?'Rangliste nach Guthaben':'Feste Reihenfolge')});
+// Blueprint-Händler: Level 2 / 3 gegen CC kaufen (einmal pro Team). Die Karte händigt der Betreuer physisch aus; die Fabrik prüft sie weiterhin per Augenschein.
+const buyBp=(t,l)=>act(s=>{if(!has(s,t))return NOTEAM();l=+l;if(!BPN[l])return N('Unbekannter Blueprint.');
+  const name=nm(s,t);if(s.bp[t][l])return N(`${name} besitzt den Blueprint Level ${l} bereits.`);
+  const c=s.bpc[l];if(bal(s,t)<c)return N(`Unzureichendes Guthaben! Preis ${fmt(c)} CC, Guthaben ${fmt(bal(s,t))} CC.`);
+  s.bal[t]=bal(s,t)-c;s.bp[t][l]=Date.now();sfx(s,'trade');lg(s,`🗺 ${name}: Blueprint Level ${l} gekauft (−${c} CC)`);
+  return Y(`✔ Blueprint Level ${l} gekauft – ${fmt(c)} CC abgebucht, Guthaben ${fmt(s.bal[t])} CC. Bitte jetzt die physische Blueprint-Karte aushändigen.`)});
+const setBp=(t,l,on)=>act(s=>{if(!has(s,t))return NOTEAM();if(!BPN[l])return N('Unbekannter Blueprint.');if(on)s.bp[t][l]=Date.now();else delete s.bp[t][l];
+  lg(s,`🗺 Spielleitung: ${nm(s,t)} Blueprint Level ${l} ${on?'eingetragen':'entfernt'} (ohne Buchung)`);return Y(`✔ ${nm(s,t)}: Level ${l} ${on?'eingetragen':'entfernt'}`)});
+const setBpCost=(l,v)=>act(s=>{const x=String(v).trim()===''?NaN:Math.floor(Number(v));if(!BPN[l])return N('Unbekannter Blueprint.');if(!(x>=0)||x>1e6)return N('Preis: Betrag ≥ 0 eingeben.');s.bpc[l]=x;return Y(`✔ Blueprint Level ${l}: ${fmt(x)} CC`)});
 // Teams hinzufügen / löschen (Admin). Startguthaben = aktuelles Startkapital (Standard 500 CC).
 const addTeam=()=>act(s=>{
   if(s.tl.length>=MAXT)return N(`Maximal ${MAXT} Teams möglich.`);
@@ -166,7 +175,7 @@ const addTeam=()=>act(s=>{
 const delTeam=t=>act(s=>{
   if(!has(s,t))return N('Dieses Team gibt es nicht mehr.');
   if(s.tl.length<=1)return N('Das letzte Team kann nicht gelöscht werden.');
-  const name=nm(s,t);s.tl=s.tl.filter(x=>x!==t);for(const m of['bal','tm','sh','lv','nm'])delete s[m][t];
+  const name=nm(s,t);s.tl=s.tl.filter(x=>x!==t);for(const m of['bal','tm','sh','lv','nm','bp'])delete s[m][t];
   for(const id in s.pat)if(s.pat[id].t===t)delete s.pat[id];                       // Patente des Teams enden mit dem Team
   lg(s,`🗑 Team gelöscht: ${name}`);return Y(`✔ ${name} gelöscht.`)});
 
@@ -190,6 +199,6 @@ function beat(fn){   // Terminal-Heartbeat (eigener Knoten pro Gerät, verschwin
   f();setInterval(f,10000);if(ref)ref.child('tr/'+id).onDisconnect().remove();
   return f;
 }
-window.CC={PR,PM,DICE,MAXT,PAT,SH,EVL,EVD,fresh,esc,act,init,sub:f=>{subs.push(f);f(S)},lg,sfx,nm,members,frozen,trade,craft,patent,shield,levelUp,fw,raid,quote,adjBal,setBal,resetBal,setCap,setRank,rb,rs,bal,fmt,ranking,addTeam,delTeam,LVC,PAIN,NOFUNDS,trig,stopEv,setTeam,ge,mmss,gtime,bant,stat,pats,tick,beat,
+window.CC={PR,PM,DICE,MAXT,PAT,SH,EVL,EVD,fresh,esc,act,init,sub:f=>{subs.push(f);f(S)},lg,sfx,nm,members,frozen,trade,craft,patent,shield,levelUp,fw,reportAttack,quote,adjBal,setBal,resetBal,setCap,setRank,rb,rs,bal,fmt,ranking,addTeam,delTeam,buyBp,setBp,setBpCost,BPN,LVC,PAIN,NOFUNDS,trig,stopEv,setTeam,ge,mmss,gtime,bant,stat,pats,tick,beat,
   get S(){return S},get TR(){return TR},get loaded(){return loaded}};
 })();
