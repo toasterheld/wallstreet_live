@@ -1,17 +1,21 @@
 (()=>{
-const{PR,PM,TEAMS,DICE,PAT,SH,sub,craft,patent,shield,levelUp,raid,fw,trade,quote,pats,mmss,beat,init,bal,fmt,rb,rs,LVC}=CC,$=s=>document.querySelector(s),R=Math.round;
-const ot=TEAMS.map(t=>`<option value="${t}">Team ${t}</option>`).join(''),op=a=>a.map(p=>`<option value="${p.id}">${p.n}</option>`).join('');
-$('#tm').innerHTML=ot;$('#vt').innerHTML=ot;$('#vt').selectedIndex=1;
+const{PR,PM,DICE,PAT,SH,sub,craft,patent,shield,levelUp,raid,fw,trade,quote,pats,mmss,beat,init,bal,fmt,rb,rs,LVC}=CC,$=s=>document.querySelector(s),R=Math.round;
+const op=a=>a.map(p=>`<option value="${p.id}">${p.n}</option>`).join('');
 $('#fp').innerHTML=op(PR.filter(p=>p.rc));$('#pp').innerHTML=op(PR);$('#bp').innerHTML=op(PR);
-let hb=()=>{},st=localStorage.cc_st||'1';$('#stn').value=st;$('#nm').value=localStorage.cc_name||'';$('#tm').value=localStorage.cc_tm||TEAMS[0];
+let hb=()=>{},st=localStorage.cc_st||'1';$('#stn').value=st;$('#nm').value=localStorage.cc_name||'';
 const res=(id,r)=>{const e=$(id);e.hidden=false;e.className='res '+(r&&r.ok?'ok':'no');e.textContent=r?r.txt:''};
 const show=()=>{for(let i=1;i<5;i++)$('#s'+i).hidden=st!=i};
-const nm=t=>CC.nm(CC.S,t);
-function lab(){['tm','vt'].forEach(i=>document.querySelectorAll('#'+i+' option').forEach(o=>{const x=nm(o.value);if(o.textContent!==x)o.textContent=x}))}   // Teamnamen aus dem Admin
+const nm=t=>CC.nm(CC.S,t),esc=CC.esc;
+let sig='';   // Team-Auswahl live aus dem Spielstand: Teams, die der Admin hinzufügt/umbenennt/löschen, erscheinen sofort in beiden Dropdowns
+function lab(){const tl=CC.S.tl,g=tl.map(t=>t+'\u0001'+nm(t)).join('\u0002');if(g===sig)return;sig=g;
+  const k1=$('#tm').value||localStorage.cc_tm,k2=$('#vt').value,html=tl.map(t=>`<option value="${esc(t)}">${esc(nm(t))}</option>`).join('');
+  $('#tm').innerHTML=html;$('#vt').innerHTML=html;
+  const me=tl.includes(k1)?k1:tl[0];$('#tm').value=me;
+  $('#vt').value=tl.includes(k2)&&k2!==me?k2:(tl.find(t=>t!==me)||me);   // Opfer-Vorauswahl: ein anderes Team
+  localStorage.cc_tm=me}
 function render(){lab();
-  const s=CC.S,t=$('#tm').value,n=Date.now(),i=s.inv[t]||{},l=Object.keys(i).filter(k=>i[k]).map(k=>`${i[k]}× ${PM[k].n}`);
+  const s=CC.S,t=$('#tm').value,n=Date.now();if(!t)return;
   $('#rc').textContent='Rezept: '+Object.entries(PM[$('#fp').value].rc).map(([c,k])=>`${k}× ${PM[c].n}`).join(' + ');
-  $('#iv').textContent=`Konto ${nm(t)}: ${l.length?l.join(', '):'leer'}`;
   const B=bal(s,t),L=s.lv[t];$('#bal').textContent='💰 '+fmt(B)+' CC';
   $('#lv').textContent=`Level ${L} · W${DICE[L]}`;
   const lt=L>=DICE.length-1?'🏆 Maximales Level erreicht':`⬆ Level-Up (+1 Level) – ${LVC[L]} CC`;if($('#lu').textContent!==lt)$('#lu').textContent=lt;

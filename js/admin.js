@@ -1,5 +1,5 @@
 (()=>{
-const{PR,TEAMS,DICE,EVL,EVD,act,sub,lg,sfx,tick,gtime,bant,stat,esc,nm,mmss,init}=CC,$=s=>document.querySelector(s),Q=s=>document.querySelectorAll(s),R=Math.round;
+const{PR,DICE,EVL,EVD,act,sub,lg,sfx,tick,gtime,bant,stat,esc,nm,mmss,init}=CC,$=s=>document.querySelector(s),Q=s=>document.querySelectorAll(s),R=Math.round;
 
 /* ---------- Sound (Web Audio API – alles synthetisch, keine Dateien) ---------- */
 let ac=null,on=localStorage.cc_snd!=='0';
@@ -30,24 +30,31 @@ setInterval(()=>{const n=Date.now(),rs=Object.entries(CC.S.ev||{}).filter(([k,e]
   if(rs.length){const r=Math.min(...rs);if(r!==lastR){lastR=r;play('tick')}}else lastR=0},200);
 
 /* ---------- Aufbau (einmalig – Buttons werden nie neu gerendert, damit keine Klicks verloren gehen) ---------- */
-$('#tt').innerHTML=TEAMS.map(t=>`<option value="${t}">Team ${t}</option>`).join('');
 $('#tp').innerHTML=PR.map(p=>`<option value="${p.id}">${p.n}</option>`).join('');
-$('#accg').innerHTML=TEAMS.map(t=>`<div class="ac"><div class="an" data-an="${t}"></div><div class="av" data-av="${t}"></div><div class="ag" data-ag="${t}"></div>
+// Team-Karten werden NICHT neu gerendert, sondern per ID abgeglichen: neue Teams kommen dazu, gelöschte verschwinden, bestehende Felder (Fokus, Eingaben) bleiben unangetastet
+const el=h=>{const d=document.createElement('div');d.innerHTML=h.trim();return d.firstElementChild};
+function sync(box,ids,make){const m={};[...box.children].forEach(e=>m[e.dataset.id]=e);
+  ids.forEach((id,i)=>{const e=m[id]||make(id);if(box.children[i]!==e)box.insertBefore(e,box.children[i]||null)});
+  [...box.children].slice(ids.length).forEach(e=>e.remove())}
+const accCard=t=>{t=esc(t);return el(`<div class="ac" data-id="${t}"><div class="an" data-an="${t}"></div><div class="av" data-av="${t}"></div>
 <div class="row"><button class="b-r" data-adj="-100" data-t="${t}">−100 CC</button><button class="b-g" data-adj="100" data-t="${t}">+100 CC</button></div>
-<div class="row"><input type="number" min="0" step="1" data-bi="${t}" placeholder="Betrag" aria-label="Kontostand setzen ${t}"><button data-set="${t}">Setzen</button></div></div>`).join('');
+<div class="row"><input type="number" min="0" step="1" data-bi="${t}" placeholder="Betrag" aria-label="Kontostand setzen"><button data-set="${t}">Setzen</button></div></div>`)};
+const teamRow=t=>{t=esc(t);return el(`<div class="trow" data-id="${t}"><div class="th"><b class="ix"></b><input class="tin" data-t="${t}" data-f="n" maxlength="24" placeholder="Teamname, z. B. Cyber-Hawks" aria-label="Teamname"></div>
+<input class="tmi" data-t="${t}" data-f="m" maxlength="140" placeholder="Mitglieder: Jan, Alex, Sarah, Tom, Mia" aria-label="Mitglieder"><div class="stl"><span class="st" data-t="${t}"></span></div><div class="bt">
+<button class="b-o" data-a="fw" data-t="${t}">🛡️ Firewall&nbsp;(5&nbsp;Min)</button><button class="b-r" data-a="hk" data-t="${t}">💀 Gesperrt/<wbr>Gehackt&nbsp;(3&nbsp;Min)</button><button class="b-g" data-a="ok" data-t="${t}">↺ Reset</button><button class="b-r" data-del="${t}">🗑 Team löschen</button></div></div>`)};
+let tsig='';function syncSel(s){const g=s.tl.map(t=>t+'\u0001'+nm(s,t)).join('\u0002');if(g===tsig)return;tsig=g;
+  const v=$('#tt').value;$('#tt').innerHTML=s.tl.map(t=>`<option value="${esc(t)}">${esc(nm(s,t))}</option>`).join('');if(s.tl.includes(v))$('#tt').value=v}
 $('#cb').innerHTML=PR.map((p,i)=>`<button data-ch="${i}">${p.n}</button>`).join('');
 $('#evg').innerHTML=EVL.map(e=>`<button class="b-o" data-ev="${e.id}"><span>${e.ic} ${esc(e.n)}</span><small>${esc(e.txt)} · ${e.inst?'Einmal-Ereignis':e.min+' Min'}</small></button>`).join('');
 $('#ael').innerHTML=EVL.map(e=>`<div class="ae" data-ae="${e.id}" hidden><span>⏱ ${e.ic} <b>${esc(e.n)}</b> – ${e.inst?'Meldung noch':'noch'} <b class="cd up"></b></span><button class="b-r" data-end="${e.id}">⏹ beenden</button></div>`).join('')+'<div class="mut" id="ae0">Kein Event aktiv.</div>';
-$('#at').innerHTML=TEAMS.map(t=>`<div class="trow"><div class="th"><b>${t}</b><input class="tin" data-t="${t}" data-f="n" maxlength="24" placeholder="Teamname, z. B. Cyber-Hawks" aria-label="Teamname ${t}"></div>
-<input class="tmi" data-t="${t}" data-f="m" maxlength="140" placeholder="Mitglieder: Jan, Alex, Sarah, Tom, Mia" aria-label="Mitglieder ${t}"><div class="stl"><span class="st" data-t="${t}"></span></div><div class="bt">
-<button class="b-o" data-a="fw" data-t="${t}">🛡️ Firewall&nbsp;(5&nbsp;Min)</button><button class="b-r" data-a="hk" data-t="${t}">💀 Gesperrt/<wbr>Gehackt&nbsp;(3&nbsp;Min)</button><button class="b-g" data-a="ok" data-t="${t}">↺ Reset</button></div></div>`).join('');
 
 let nt;const note=t=>{$('#fb').textContent=t;clearTimeout(nt);nt=setTimeout(()=>$('#fb').innerHTML='&nbsp;',4000)};
+let tt2;const tmm=t=>{$('#tmm').textContent=t;clearTimeout(tt2);tt2=setTimeout(()=>$('#tmm').innerHTML='&nbsp;',5000)};
 let at;const am=t=>{$('#am').textContent=t;clearTimeout(at);at=setTimeout(()=>$('#am').innerHTML='&nbsp;',5000)};
 let et;const evm=t=>{$('#evm').textContent=t;clearTimeout(et);et=setTimeout(()=>$('#evm').innerHTML='&nbsp;',5000)};
 document.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;const d=b.dataset,i=b.id;
-  if(d.a)act(s=>{s.tm[d.t]={k:d.a,u:d.a=='ok'?0:Date.now()+(d.a=='fw'?3e5:18e4)};if(d.a!='ok')sfx(s,'glitch');lg(s,`${nm(s,d.t)}: ${{fw:'Firewall 5 Min',hk:'gehackt/gesperrt 3 Min',ok:'Status Reset'}[d.a]}`)});
+  if(d.a)act(s=>{if(!s.tl.includes(d.t))return;s.tm[d.t]={k:d.a,u:d.a=='ok'?0:Date.now()+(d.a=='fw'?3e5:18e4)};if(d.a!='ok')sfx(s,'glitch');lg(s,`${nm(s,d.t)}: ${{fw:'Firewall 5 Min',hk:'gehackt/gesperrt 3 Min',ok:'Status Reset'}[d.a]}`)});
   if(d.ev)CC.trig(d.ev).then(r=>evm(r.txt));
   if(d.end)CC.stopEv(d.end).then(r=>evm(r.txt));
   if(d.adj)CC.adjBal(d.t,+d.adj).then(r=>am(r.txt));
@@ -55,6 +62,8 @@ document.addEventListener('click',e=>{
   if(i=='capb')CC.setCap($('#cap').value).then(r=>am(r.txt));
   if(i=='rsb'&&confirm(`Alle Konten auf Startkapital (${CC.fmt(CC.S.cap)} CC) zurücksetzen?\n\nDie aktuellen Kontostände aller Teams gehen verloren.`))CC.resetBal().then(r=>am(r.txt));
   if(i=='rk')CC.setRank(!CC.S.rk);
+  if(i=='addt')CC.addTeam().then(r=>tmm(r.txt));
+  if(d.del&&confirm(`Team „${nm(CC.S,d.del)}“ wirklich löschen?\n\nKontostand (${CC.fmt(CC.bal(CC.S,d.del))} CC), Level, Schild und Patente dieses Teams gehen verloren. Das lässt sich nicht rückgängig machen.`))CC.delTeam(d.del).then(r=>tmm(r.txt));
   if(d.ch)act(s=>{s.ch.i=+d.ch;s.ch.auto=false});
   if(i=='ar')act(s=>{s.ch.auto=!s.ch.auto});
   if(i=='buy'||i=='sell')CC.trade(i=='buy'?1:-1,+$('#tq').value,$('#tt').value,$('#tp').value).then(r=>note(r.txt));
@@ -63,26 +72,27 @@ document.addEventListener('click',e=>{
   if(i=='gs')act(s=>{if(!s.gt.run)s.gt.run=Date.now()});
   if(i=='gp')act(s=>{if(s.gt.run){s.gt.el+=Date.now()-s.gt.run;s.gt.run=0}});
   if(i=='gr')act(s=>{s.gt.el=0;s.gt.run=0});
-  if(i=='rst'&&confirm('Neue Spielrunde starten?\n\nPreise, Level, Lager, Patente, Events (alle wieder freigeschaltet) und Spielzeit werden zurückgesetzt. Alle Konten gehen auf das Startkapital. Teamnamen, Mitglieder und das Startkapital bleiben erhalten.'))
-    act(s=>{const keep=s.nm,sf=s.sfx,rk=s.rk;Object.assign(s,CC.fresh(s.cap),{nm:keep,sfx:sf,rk});lg(s,'Neue Spielrunde gestartet')});
+  if(i=='rst'&&confirm('Neue Spielrunde starten?\n\nPreise, Level, Patente, Events (alle wieder freigeschaltet) und Spielzeit werden zurückgesetzt. Alle Konten gehen auf das Startkapital. Teams (Namen, Mitglieder) und das Startkapital bleiben erhalten.'))
+    act(s=>{const keep=s.nm,sf=s.sfx,rk=s.rk,nx=s.nx,tl=s.tl.slice();Object.assign(s,CC.fresh(s.cap,tl),{nm:keep,sfx:sf,rk,nx});lg(s,'Neue Spielrunde gestartet')});
 });
 $('#at').addEventListener('change',e=>{const i=e.target.closest('[data-f]');if(i)CC.setTeam(i.dataset.t,i.dataset.f,i.value)});   // Name/Mitglieder speichern beim Verlassen des Feldes
 $('#tl').addEventListener('change',()=>act(s=>{s.gt.lim=Math.max(0,+$('#tl').value||0)}));
 $('#ct').addEventListener('keydown',e=>{if(e.key=='Enter')$('#cust').click()});
 
 function render(s){
+  sync($('#accg'),s.tl,accCard);sync($('#at'),s.tl,teamRow);syncSel(s);
+  Q('.ix').forEach((e,i)=>{const x='#'+(i+1);if(e.textContent!==x)e.textContent=x});
+  $('#tcn').textContent=`(${s.tl.length} Teams, max. ${CC.MAXT})`;$('#addt').disabled=s.tl.length>=CC.MAXT;Q('[data-del]').forEach(b=>b.disabled=s.tl.length<=1);
   $('#ap').innerHTML='<tr><th>PRODUKT</th><th class="ra">PREIS</th><th>TREND</th></tr>'+PR.map(p=>{const r=s.pr[p.id],c=r.c>r.p?'up':r.c<r.p?'dn':'';return`<tr><td>${p.n}${CC.frozen(s,p.id)?' ❄':''}</td><td class="ra ${c}"><b>${R(r.c)} CC</b></td><td>${c=='up'?'📈':c=='dn'?'📉':'➖'}</td></tr>`}).join('');
   $('#lg').innerHTML=s.lg.map(l=>`<div>${esc(l)}</div>`).join('');
   Q('.st').forEach(e=>{const t=e.dataset.t,[k,x]=stat(t);e.innerHTML=`<b class="s-${k}">${x.join(' · ')}</b> · Level ${s.lv[t]} [W${DICE[s.lv[t]]}]`});
   Q('.tin,.tmi').forEach(e=>{if(document.activeElement!==e){const v=(s.nm[e.dataset.t]||{})[e.dataset.f]||'';if(e.value!==v)e.value=v}});
   Q('[data-an]').forEach(e=>{const x=nm(s,e.dataset.an);if(e.textContent!==x)e.textContent=x});
   Q('[data-av]').forEach(e=>{const x='💰 '+CC.fmt(CC.bal(s,e.dataset.av))+' CC';if(e.textContent!==x)e.textContent=x});
-  Q('[data-ag]').forEach(e=>{const t=e.dataset.ag,x=`Lager ${CC.fmt(CC.invVal(s,t))} CC · Gesamt ${CC.fmt(CC.total(s,t))} CC`;if(e.textContent!==x)e.textContent=x});
   if(document.activeElement!==$('#cap'))$('#cap').value=s.cap;
   $('#rsb').textContent=`↺ Alle Konten auf Startkapital (${CC.fmt(s.cap)} CC) zurücksetzen`;
-  $('#rk').textContent='🏆 Beamer: nach Gesamtkapital sortieren: '+(s.rk?'AN':'AUS');$('#rk').className=s.rk?'b-g':'';
+  $('#rk').textContent='🏆 Beamer: Rangliste nach Guthaben sortieren: '+(s.rk?'AN':'AUS');$('#rk').className=s.rk?'b-g':'';
   $('#tbal').textContent=`Guthaben ${nm(s,$('#tt').value)}: ${CC.fmt(CC.bal(s,$('#tt').value))} CC`;
-  Q('#tt option').forEach(o=>{const x=nm(s,o.value);if(o.textContent!==x)o.textContent=x});
   $('#agt').textContent=gtime(s);if(document.activeElement!==$('#tl'))$('#tl').value=s.gt.lim;
   const n=Date.now();let k=0;
   Q('[data-ae]').forEach(r=>{const e=s.ev[r.dataset.ae],a=!!(e&&e.u>n&&EVD[r.dataset.ae]);r.hidden=!a;if(a){k++;r.querySelector('.cd').textContent=mmss(e.u-n)}});

@@ -1,5 +1,5 @@
 (()=>{
-const{PR,PM,TEAMS,DICE,sub,tick,gtime,bant,stat,mmss,esc,nm,members,init}=CC,$=s=>document.querySelector(s),R=Math.round,L=n=>R(n).toLocaleString('de-DE');
+const{PR,PM,DICE,sub,tick,gtime,bant,stat,mmss,esc,nm,members,init}=CC,$=s=>document.querySelector(s),R=Math.round,L=n=>R(n).toLocaleString('de-DE');
 let cur=PR.length-1,to=cur,dv=PR[cur].b;const prev={};
 
 function line(cv,pts,big){   // Canvas-Linienchart: big = Zeitachse+Raster, sonst Sparkline
@@ -39,12 +39,14 @@ function rP(s){const n=Date.now();
 const lastB={},flashB={};
 function fit(){   // passt die Schrift der Team-Liste an, wenn sie nicht in die Karte passt (z. B. 5 Teams mit vielen Mitgliedern)
   const c=$('#pt'),p=c.parentElement;let z=100;c.style.fontSize='';
-  while(p.scrollHeight>p.clientHeight+1&&z>50){z-=4;c.style.fontSize=(z/100)+'rem'}
+  while(p.scrollHeight>p.clientHeight+1&&z>36){z-=4;c.style.fontSize=(z/100)+'rem'}
 }
 const rT=s=>{const now=Date.now();
-  for(const t of TEAMS){const b=CC.bal(s,t);if(lastB[t]!=null&&lastB[t]!==b)flashB[t]={d:b>lastB[t]?1:-1,u:now+1500};lastB[t]=b}   // Kontostand ändert sich → kurz grün/rot
+  for(const t of s.tl){const b=CC.bal(s,t);if(lastB[t]!=null&&lastB[t]!==b)flashB[t]={d:b>lastB[t]?1:-1,u:now+1500};lastB[t]=b}
+  for(const t in lastB)if(!s.tl.includes(t)){delete lastB[t];delete flashB[t]}   // Kontostand ändert sich → kurz grün/rot
+  const n2=s.tl.length;$('#pt').className=n2>6?'many':'';
   $('#pt').innerHTML=CC.ranking(s).map((t,i)=>{const[k,a]=stat(t),m=members(s,t),f=flashB[t]&&flashB[t].u>now?(flashB[t].d>0?' bu':' bd'):'';
-    return`<div class="tm s-${k}"><div class="h1"><span class="tn">${s.rk?`<span class="rk">#${i+1}</span> `:''}${esc(nm(s,t))} <small>LEVEL ${s.lv[t]} · W${DICE[s.lv[t]]}</small></span><span class="mw"><b class="money${f}">💰 ${CC.fmt(CC.bal(s,t))} CC</b>${s.rk?`<span class="gk">Gesamt ${CC.fmt(CC.total(s,t))} CC · Lager ${CC.fmt(CC.invVal(s,t))}</span>`:''}</span></div><div class="h2"><div class="mb">${m.map(esc).join(' · ')}</div><b class="stt">${a.join('<br>')}</b></div></div>`}).join('');
+    return`<div class="tm s-${k}"><div class="h1"><span class="tn">${s.rk?`<span class="rk">#${i+1}</span> `:''}${esc(nm(s,t))} <small>LEVEL ${s.lv[t]} · W${DICE[s.lv[t]]}</small></span><span class="mw"><b class="money${f}">💰 ${CC.fmt(CC.bal(s,t))} CC</b></span></div><div class="h2"><div class="mb">${m.map(esc).join(' · ')}</div><b class="stt">${a.join('<br>')}</b></div></div>`}).join('');
   fit()};
 const rH=s=>{$('#gt').textContent=gtime(s);$('#gt').className=s.gt.lim&&CC.ge(s.gt)>=s.gt.lim*6e4?'dn':'';$('#wc').textContent=new Date().toLocaleTimeString('de-DE')};
 const rN=s=>{const t=bant(s);$('#bn').classList.toggle('on',!!t);if($('#bt').textContent!=t)$('#bt').textContent=t};
@@ -52,7 +54,8 @@ const rN=s=>{const t=bant(s);$('#bn').classList.toggle('on',!!t);if($('#bt').tex
 const rPat=s=>{const l=CC.pats(s);$('#pp').innerHTML=l.length?l.map(x=>`<div class="pt">📜 <b>MONOPOL:</b> ${esc(nm(s,x.t))} – ${PM[x.id].n} <b>[${mmss(x.u-Date.now())}]</b></div>`).join(''):'<div class="mut">Keine aktiven Patente.</div>'};
 function rK(){let x=0;document.querySelectorAll('.lk[data-u]').forEach(e=>{const m=e.dataset.u-Date.now();if(m<=0)x=1;else e.textContent=lkT(e.dataset.z=='1',+e.dataset.u,e.dataset.n)});if(x)rP(CC.S)}
 $('#mt').textContent=PR[cur].n;
-sub(s=>{rP(s);rT(s);rPat(s);rH(s);rN(s);if(!s.ch.auto&&s.ch.i!=to)go(s.ch.i)});
+const lay=s=>{const w=s.tl.length>8,m=$('.mn');if(m.classList.contains('wide')!==w){m.classList.toggle('wide',w);requestAnimationFrame(()=>rP(CC.S))}};   // ab 9 Teams bekommt die Team-Spalte mehr Breite
+sub(s=>{lay(s);rP(s);rT(s);rPat(s);rH(s);rN(s);if(!s.ch.auto&&s.ch.i!=to)go(s.ch.i)});
 setInterval(()=>{tick();const s=CC.S;rT(s);rPat(s);rH(s);rN(s);rK()},500);
 setInterval(()=>{if(CC.S.ch.auto)go((to+1)%PR.length)},15000);   // Auto-Rotation alle 15 s
 addEventListener('resize',()=>rP(CC.S));
