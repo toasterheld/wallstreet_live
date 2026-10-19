@@ -32,6 +32,9 @@ setInterval(()=>{const n=Date.now(),rs=Object.entries(CC.S.ev||{}).filter(([k,e]
 /* ---------- Aufbau (einmalig – Buttons werden nie neu gerendert, damit keine Klicks verloren gehen) ---------- */
 $('#tt').innerHTML=TEAMS.map(t=>`<option value="${t}">Team ${t}</option>`).join('');
 $('#tp').innerHTML=PR.map(p=>`<option value="${p.id}">${p.n}</option>`).join('');
+$('#accg').innerHTML=TEAMS.map(t=>`<div class="ac"><div class="an" data-an="${t}"></div><div class="av" data-av="${t}"></div><div class="ag" data-ag="${t}"></div>
+<div class="row"><button class="b-r" data-adj="-100" data-t="${t}">−100 CC</button><button class="b-g" data-adj="100" data-t="${t}">+100 CC</button></div>
+<div class="row"><input type="number" min="0" step="1" data-bi="${t}" placeholder="Betrag" aria-label="Kontostand setzen ${t}"><button data-set="${t}">Setzen</button></div></div>`).join('');
 $('#cb').innerHTML=PR.map((p,i)=>`<button data-ch="${i}">${p.n}</button>`).join('');
 $('#evg').innerHTML=EVL.map(e=>`<button class="b-o" data-ev="${e.id}"><span>${e.ic} ${esc(e.n)}</span><small>${esc(e.txt)} · ${e.inst?'Einmal-Ereignis':e.min+' Min'}</small></button>`).join('');
 $('#ael').innerHTML=EVL.map(e=>`<div class="ae" data-ae="${e.id}" hidden><span>⏱ ${e.ic} <b>${esc(e.n)}</b> – ${e.inst?'Meldung noch':'noch'} <b class="cd up"></b></span><button class="b-r" data-end="${e.id}">⏹ beenden</button></div>`).join('')+'<div class="mut" id="ae0">Kein Event aktiv.</div>';
@@ -40,12 +43,18 @@ $('#at').innerHTML=TEAMS.map(t=>`<div class="trow"><div class="th"><b>${t}</b><i
 <button class="b-o" data-a="fw" data-t="${t}">🛡️ Firewall&nbsp;(5&nbsp;Min)</button><button class="b-r" data-a="hk" data-t="${t}">💀 Gesperrt/<wbr>Gehackt&nbsp;(3&nbsp;Min)</button><button class="b-g" data-a="ok" data-t="${t}">↺ Reset</button></div></div>`).join('');
 
 let nt;const note=t=>{$('#fb').textContent=t;clearTimeout(nt);nt=setTimeout(()=>$('#fb').innerHTML='&nbsp;',4000)};
+let at;const am=t=>{$('#am').textContent=t;clearTimeout(at);at=setTimeout(()=>$('#am').innerHTML='&nbsp;',5000)};
 let et;const evm=t=>{$('#evm').textContent=t;clearTimeout(et);et=setTimeout(()=>$('#evm').innerHTML='&nbsp;',5000)};
 document.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;const d=b.dataset,i=b.id;
   if(d.a)act(s=>{s.tm[d.t]={k:d.a,u:d.a=='ok'?0:Date.now()+(d.a=='fw'?3e5:18e4)};if(d.a!='ok')sfx(s,'glitch');lg(s,`${nm(s,d.t)}: ${{fw:'Firewall 5 Min',hk:'gehackt/gesperrt 3 Min',ok:'Status Reset'}[d.a]}`)});
   if(d.ev)CC.trig(d.ev).then(r=>evm(r.txt));
   if(d.end)CC.stopEv(d.end).then(r=>evm(r.txt));
+  if(d.adj)CC.adjBal(d.t,+d.adj).then(r=>am(r.txt));
+  if(d.set){const x=$(`[data-bi="${d.set}"]`);CC.setBal(d.set,x.value).then(r=>{am(r.txt);if(r.ok)x.value=''})}
+  if(i=='capb')CC.setCap($('#cap').value).then(r=>am(r.txt));
+  if(i=='rsb'&&confirm(`Alle Konten auf Startkapital (${CC.fmt(CC.S.cap)} CC) zurücksetzen?\n\nDie aktuellen Kontostände aller Teams gehen verloren.`))CC.resetBal().then(r=>am(r.txt));
+  if(i=='rk')CC.setRank(!CC.S.rk);
   if(d.ch)act(s=>{s.ch.i=+d.ch;s.ch.auto=false});
   if(i=='ar')act(s=>{s.ch.auto=!s.ch.auto});
   if(i=='buy'||i=='sell')CC.trade(i=='buy'?1:-1,+$('#tq').value,$('#tt').value,$('#tp').value).then(r=>note(r.txt));
@@ -54,8 +63,8 @@ document.addEventListener('click',e=>{
   if(i=='gs')act(s=>{if(!s.gt.run)s.gt.run=Date.now()});
   if(i=='gp')act(s=>{if(s.gt.run){s.gt.el+=Date.now()-s.gt.run;s.gt.run=0}});
   if(i=='gr')act(s=>{s.gt.el=0;s.gt.run=0});
-  if(i=='rst'&&confirm('Neue Spielrunde starten?\n\nPreise, Level, Lager, Patente, Events (alle wieder freigeschaltet) und Spielzeit werden zurückgesetzt. Teamnamen und Mitglieder bleiben erhalten.'))
-    act(s=>{const keep=s.nm,sf=s.sfx;Object.assign(s,CC.fresh(),{nm:keep,sfx:sf});lg(s,'Neue Spielrunde gestartet')});
+  if(i=='rst'&&confirm('Neue Spielrunde starten?\n\nPreise, Level, Lager, Patente, Events (alle wieder freigeschaltet) und Spielzeit werden zurückgesetzt. Alle Konten gehen auf das Startkapital. Teamnamen, Mitglieder und das Startkapital bleiben erhalten.'))
+    act(s=>{const keep=s.nm,sf=s.sfx,rk=s.rk;Object.assign(s,CC.fresh(s.cap),{nm:keep,sfx:sf,rk});lg(s,'Neue Spielrunde gestartet')});
 });
 $('#at').addEventListener('change',e=>{const i=e.target.closest('[data-f]');if(i)CC.setTeam(i.dataset.t,i.dataset.f,i.value)});   // Name/Mitglieder speichern beim Verlassen des Feldes
 $('#tl').addEventListener('change',()=>act(s=>{s.gt.lim=Math.max(0,+$('#tl').value||0)}));
@@ -66,6 +75,13 @@ function render(s){
   $('#lg').innerHTML=s.lg.map(l=>`<div>${esc(l)}</div>`).join('');
   Q('.st').forEach(e=>{const t=e.dataset.t,[k,x]=stat(t);e.innerHTML=`<b class="s-${k}">${x.join(' · ')}</b> · Level ${s.lv[t]} [W${DICE[s.lv[t]]}]`});
   Q('.tin,.tmi').forEach(e=>{if(document.activeElement!==e){const v=(s.nm[e.dataset.t]||{})[e.dataset.f]||'';if(e.value!==v)e.value=v}});
+  Q('[data-an]').forEach(e=>{const x=nm(s,e.dataset.an);if(e.textContent!==x)e.textContent=x});
+  Q('[data-av]').forEach(e=>{const x='💰 '+CC.fmt(CC.bal(s,e.dataset.av))+' CC';if(e.textContent!==x)e.textContent=x});
+  Q('[data-ag]').forEach(e=>{const t=e.dataset.ag,x=`Lager ${CC.fmt(CC.invVal(s,t))} CC · Gesamt ${CC.fmt(CC.total(s,t))} CC`;if(e.textContent!==x)e.textContent=x});
+  if(document.activeElement!==$('#cap'))$('#cap').value=s.cap;
+  $('#rsb').textContent=`↺ Alle Konten auf Startkapital (${CC.fmt(s.cap)} CC) zurücksetzen`;
+  $('#rk').textContent='🏆 Beamer: nach Gesamtkapital sortieren: '+(s.rk?'AN':'AUS');$('#rk').className=s.rk?'b-g':'';
+  $('#tbal').textContent=`Guthaben ${nm(s,$('#tt').value)}: ${CC.fmt(CC.bal(s,$('#tt').value))} CC`;
   Q('#tt option').forEach(o=>{const x=nm(s,o.value);if(o.textContent!==x)o.textContent=x});
   $('#agt').textContent=gtime(s);if(document.activeElement!==$('#tl'))$('#tl').value=s.gt.lim;
   const n=Date.now();let k=0;

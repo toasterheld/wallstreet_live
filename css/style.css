@@ -46,7 +46,7 @@ h1{font-size:2.1rem;color:var(--neon);text-shadow:0 0 .5em var(--neon);letter-sp
 
 .s-sh{color:var(--blue)}.tm.s-sh{border-color:var(--blue);box-shadow:0 0 1em #00e5ff55}
 .lk{font-size:.8rem;color:var(--orange);min-height:1.3em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.rc{display:grid;grid-template-rows:auto minmax(0,1fr);gap:1.1em;min-height:0}.rc .card{overflow:hidden}.rc .card:last-child{display:flex;flex-direction:column}#pp{overflow:auto;min-height:0}
+.rc{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:1.1em;min-height:0}.rc .card{overflow:hidden}.rc .card:last-child{display:flex;flex-direction:column}#pp{overflow:auto;min-height:0}
 .pt{font-size:.8rem;margin-bottom:.4em;padding:.3em .55em;border:1px solid var(--orange);border-radius:.4em}.pt b{color:var(--orange)}
 
 /* ---- Presenter: Team-Zeilen mit Mitgliedern ---- */
@@ -70,3 +70,29 @@ button:disabled{opacity:.35;cursor:not-allowed;filter:grayscale(.8);box-shadow:n
 .stl{font-size:.9em}
 
 #at{display:grid;grid-template-columns:repeat(auto-fit,minmax(21rem,1fr));gap:10px}#at .trow{margin:0}
+
+/* ---- Konten ---- */
+.tm .h1{align-items:center}
+.tm .money{flex:0 0 auto;font-size:1.55rem;font-weight:700;color:var(--yellow);text-shadow:0 0 .45em #ffd40088;white-space:nowrap;text-align:right}
+.tm .money.bu{color:var(--neon);text-shadow:0 0 .6em var(--neon)}.tm .money.bd{color:var(--red);text-shadow:0 0 .6em var(--red)}
+.tm .h2{display:flex;justify-content:space-between;align-items:flex-start;gap:.8em}.tm .h2 .mb{flex:1;min-width:0;margin:0}
+.tm .stt{flex:0 1 auto;max-width:55%;text-align:right;font-size:.8rem;line-height:1.25}
+.rk{color:var(--yellow)}.gk{font-size:.68rem;color:var(--mut);margin-top:.1em}
+.bal{font-size:2.1rem;text-align:center;color:var(--yellow);font-weight:700;text-shadow:0 0 .4em #ffd40088;line-height:1.1}
+.warn{color:var(--red);font-weight:700}
+.acc{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:10px}
+.ac{border:1px solid var(--line);border-radius:.4em;padding:.6em;display:flex;flex-direction:column;gap:.45em;min-width:0}
+.ac .an{overflow-wrap:anywhere;color:var(--blue);font-weight:700}.ac .av{font-size:1.6rem;font-weight:700;color:var(--yellow);text-shadow:0 0 .4em #ffd40066}.ac .ag{font-size:.8rem;color:var(--mut)}
+.ac .row input{flex:1 1 6rem}.ac .row button{flex:1 1 4rem;padding:.4em .5em}
+.accb{display:flex;flex-wrap:wrap;gap:10px;align-items:center}.accb>*{flex:0 1 auto}.accb label{color:var(--mut)}.accb input{width:7rem}
+
+/* ---- Presenter: kompakte Team-Zeilen (alles in em, damit fit() per Schriftgröße skalieren kann) ---- */
+#pt{font-size:1rem}
+.tm{font-size:1em;padding:.3em .6em .35em;margin-bottom:.35em;border-width:2px}
+.tm .tn{font-size:1.1em;line-height:1.15}.tm .tn small{font-size:.58em}
+.tm .mw{display:flex;flex-direction:column;align-items:flex-end;flex:0 0 auto;line-height:1.1}
+.tm .money{font-size:1.4em}.tm .gk{font-size:.62em;margin:0;white-space:nowrap}
+.tm .h2{margin-top:.1em}.tm .mb{font-size:.68em;line-height:1.25}.tm .stt{font-size:.75em}
+.rc .card{padding:.6em 1em}.rc h2{font-size:1rem;margin-bottom:.4em}
+#pp{display:flex;flex-wrap:wrap;gap:.4em;overflow:visible}
+.pt{font-size:.78rem;margin:0;padding:.25em .5em}

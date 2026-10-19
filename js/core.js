@@ -7,13 +7,23 @@ const PR=[['si','Silizium',40],['cu','Kupfer',35],['en','Energie / Strom',50],['
   ['mb','Mainboard',450,{chip:1,coil:2}],['gpu','High-End GPU',600,{chip:2,se:1}],['ai','AI-Supercomputer',1800,{mb:1,gpu:1,en:2}]
 ].map(([id,n,b,rc])=>({id,n,b,rc:rc||null}));
 const PM=Object.fromEntries(PR.map(p=>[p.id,p])),TEAMS=['Alpha','Bravo','Charlie','Delta','Echo'],DICE=C.dice||[2,4,6,8,12];
+const CAP=C.startCap==null?500:C.startCap,LVC=C.levelCost||[100,200,300,400],PAIN=C.painMoney==null?50:C.painMoney,STOCK=!!C.requireStock;
 const EVL=C.events||[],EVD=Object.fromEntries(EVL.map(e=>[e.id,e]));
 const byTeam=f=>Object.fromEntries(TEAMS.map(t=>[t,f()]));
-const fresh=()=>({pr:Object.fromEntries(PR.map(p=>[p.id,{c:p.b,p:p.b}])),hist:Object.fromEntries(PR.map(p=>[p.id,[[Date.now(),p.b]]])),
+const fresh=cap=>(cap=cap==null?CAP:cap,{bal:byTeam(()=>cap),cap,rk:0,pr:Object.fromEntries(PR.map(p=>[p.id,{c:p.b,p:p.b}])),hist:Object.fromEntries(PR.map(p=>[p.id,[[Date.now(),p.b]]])),
   tm:byTeam(()=>({k:'ok',u:0})),sh:byTeam(()=>0),lv:byTeam(()=>0),inv:byTeam(()=>({})),nm:byTeam(()=>({n:'',m:''})),
   pat:{},ev:{},evd:{},bn:'',gt:{lim:60,el:0,run:0},ch:{i:PR.length-1,auto:true},sfx:{n:0,k:'',t:0},lg:[]});
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const Y=t=>({ok:1,txt:t}),N=t=>({ok:0,txt:t});
+// Konten: Guthaben nie unter 0, ganze CC. Kauf wird aufgerundet, Verkauf abgerundet (Rundreise bleibt Verlust).
+const NOFUNDS='Nicht genügend CC-Coins!';
+const rb=t=>Math.ceil(t-1e-6),rs=t=>Math.floor(t+1e-6);
+const bal=(s,t)=>Math.max(0,Math.floor(Number(s.bal&&s.bal[t])||0));
+const fmt=n=>Math.round(n).toLocaleString('de-DE');
+const nof=(s,t,c)=>N(`${NOFUNDS} Preis ${fmt(c)} CC, Guthaben ${fmt(bal(s,t))} CC.`);
+const invVal=(s,t)=>Object.entries(s.inv[t]||{}).reduce((a,[k,q])=>a+(PM[k]&&q>0?q*s.pr[k].c:0),0);   // Lagerwert zum aktuellen Marktpreis
+const total=(s,t)=>bal(s,t)+invVal(s,t);
+const ranking=s=>{const l=TEAMS.slice();if(s.rk)l.sort((a,b)=>total(s,b)-total(s,a)||TEAMS.indexOf(a)-TEAMS.indexOf(b));return l};
 // Anzeigename eines Teams (frei editierbar) und Mitgliederliste
 const nm=(s,t)=>{const x=s.nm&&s.nm[t],n=x&&typeof x.n=='string'?x.n.trim():'';return n||'Team '+t};
 const members=(s,t)=>{const x=s.nm&&s.nm[t];return x&&x.m?String(x.m).split(/[,;\n]+/).map(a=>a.trim()).filter(Boolean):[]};
@@ -80,10 +90,13 @@ function trade(dir,q,team,id){
   q=Math.floor(q);if(!(q>0)||q>500)return Promise.resolve(N('Menge 1–500 eingeben.'));
   return act(s=>{
     const p=patOf(s,id,team);if(dir<0&&p)return N(`📜 Verkauf gesperrt: ${nm(s,p.t)} hält das Patent auf ${PM[id].n} (${mmss(p.u-Date.now())}).`);
-    const fz=frozen(s,id),o=s.pr[id].c,{t,m}=quote(dir,q,id,o,fz),i=s.inv[team];
+    const fz=frozen(s,id),o=s.pr[id].c,{t,m}=quote(dir,q,id,o,fz),i=s.inv[team],c=dir>0?rb(t):rs(t);
+    if(dir>0&&bal(s,team)<c)return nof(s,team,c);                                    // Prüfung VOR jeder Änderung
+    if(dir<0&&STOCK&&(i[id]||0)<q)return N(`Nicht genug Ware im Lager (${i[id]||0}× ${PM[id].n}).`);
     setP(s,id,m);i[id]=Math.max(0,(i[id]||0)+dir*q);casc(s,id,s.pr[id].c/o-1);
-    lg(s,`${nm(s,team)}: ${dir>0?'KAUF':'VERKAUF'} ${q}× ${PM[id].n} für ${R(t)} CC → Kurs ${R(s.pr[id].c)}`);sfx(s,'trade');
-    return Y(`✔ ${dir>0?'Kosten':'Erlös'}: ${R(t)} CC · ${fz?'❄ Kurs eingefroren bei '+R(o):'Kurs '+R(o)+' → '+R(s.pr[id].c)}`)});
+    s.bal[team]=bal(s,team)-dir*c;                                                    // Kauf: abziehen, Verkauf (inkl. Slippage/Spread): gutschreiben
+    lg(s,`${nm(s,team)}: ${dir>0?'KAUF':'VERKAUF'} ${q}× ${PM[id].n} für ${c} CC → Kurs ${R(s.pr[id].c)}`);sfx(s,'trade');
+    return Y(`✔ ${dir>0?'Bezahlt':'Gutgeschrieben'}: ${fmt(c)} CC · Guthaben ${fmt(s.bal[team])} CC · ${fz?'❄ Kurs eingefroren bei '+R(o):'Kurs '+R(o)+' → '+R(s.pr[id].c)}`)});
 }
 const craft=(t,id)=>act(s=>{
   const p=PM[id],rc=p.rc,pt=patOf(s,id,t);
@@ -94,10 +107,18 @@ const craft=(t,id)=>act(s=>{
   lg(s,`🛠 ${nm(s,t)}: ${p.n} hergestellt`);return Y(`✔ ${p.n} im Konto von ${nm(s,t)} verbucht. Markt: ${p.n} −3 %, Zutaten +2 %.`)});
 const patent=(t,id)=>act(s=>{const n=Date.now(),p=s.pat[id];
   if(p&&p.u>n)return N(`📜 ${PM[id].n} ist bereits patentiert (${nm(s,p.t)}, noch ${mmss(p.u-n)}).`);
-  s.pat[id]={t,u:n+PMIN*6e4};lg(s,`📜 ${nm(s,t)}: Patent auf ${PM[id].n}`);return Y(`✔ Patent erworben – ${PAT[id]} CC kassieren. ${PMIN} Min Monopol.`)});
+  const c=PAT[id]||0;if(bal(s,t)<c)return nof(s,t,c);
+  s.bal[t]=bal(s,t)-c;s.pat[id]={t,u:n+PMIN*6e4};lg(s,`📜 ${nm(s,t)}: Patent auf ${PM[id].n} (−${c} CC)`);return Y(`✔ Patent erworben – ${c} CC abgebucht, Guthaben ${fmt(s.bal[t])} CC. ${PMIN} Min Monopol.`)});
 const shield=t=>act(s=>{const n=Date.now();
   if(s.sh[t]>n)return N(`🔒 Schild läuft noch (${mmss(s.sh[t]-n)}).`);
-  s.sh[t]=n+SH.min*6e4;lg(s,`🔒 ${nm(s,t)}: Cybersecurity-Lizenz`);return Y(`✔ Schild aktiv (${SH.min} Min) – ${SH.cost} CC kassieren.`)});
+  if(bal(s,t)<SH.cost)return nof(s,t,SH.cost);
+  s.bal[t]=bal(s,t)-SH.cost;s.sh[t]=n+SH.min*6e4;lg(s,`🔒 ${nm(s,t)}: Cybersecurity-Lizenz (−${SH.cost} CC)`);return Y(`✔ Schild aktiv (${SH.min} Min) – ${SH.cost} CC abgebucht, Guthaben ${fmt(s.bal[t])} CC.`)});
+// Hacker-Akademie: Level-Up kostet LVC[aktuelles Level]
+const levelUp=t=>act(s=>{const L=s.lv[t];
+  if(L>=DICE.length-1)return N('Maximales Level erreicht.');
+  const c=LVC[L]||0;if(bal(s,t)<c)return nof(s,t,c);
+  s.bal[t]=bal(s,t)-c;s.lv[t]=L+1;lg(s,`🎓 ${nm(s,t)}: Level ${L+1} [W${DICE[L+1]}] (−${c} CC)`);
+  return Y(`✔ Level ${L+1} – W${DICE[L+1]} freigeschaltet. ${c} CC abgebucht, Guthaben ${fmt(s.bal[t])} CC.`)});
 const fw=t=>act(s=>{s.tm[t]={k:'fw',u:Date.now()+3e5};sfx(s,'glitch');lg(s,`🛡️ Firewall 5 Min für ${nm(s,t)}`);return Y(`✔ Firewall für ${nm(s,t)} läuft (5 Min).`)});
 const ri=n=>1+Math.floor(Math.random()*n);
 const raid=(a,v)=>act(s=>{const n=Date.now(),na=nm(s,a),nv=nm(s,v);
@@ -107,10 +128,21 @@ const raid=(a,v)=>act(s=>{const n=Date.now(),na=nm(s,a),nv=nm(s,v);
   let m=`${na} (W${A}): ${x}  vs.  ${nv} (W${V}): ${y}\n`,ok=0;
   if(!w)m+='✖ ANGRIFF ABGEWEHRT';
   else if(sh)m+=`🔒 Angriff gelang, aber das Cybersecurity-Schild von ${nv} verhindert den Rohstoffverlust – ${na} geht leer aus!`;
-  else{ok=1;m+=`✔ ANGRIFF ERFOLGREICH – ${na} darf Rohstoffe von ${nv} nehmen. 5-Min-Firewall für ${nv} läuft!`;s.tm[v]={k:'fw',u:n+3e5};sfx(s,'glitch')}
+  else{ok=1;m+=`✔ ANGRIFF ERFOLGREICH – ${na} darf Rohstoffe von ${nv} nehmen. 5-Min-Firewall für ${nv} läuft!`;s.tm[v]={k:'fw',u:n+3e5};sfx(s,'glitch');
+    const pm=Math.min(PAIN,bal(s,v));                                                  // Schmerzensgeld: Umbuchung Opfer → Angreifer (höchstens das vorhandene Guthaben)
+    s.bal[v]=bal(s,v)-pm;s.bal[a]=bal(s,a)+pm;
+    m+=`\n💸 ${nv} zahlt ${pm} CC Schmerzensgeld an ${na}`+(pm<PAIN?` (mehr hatte das Team nicht).`:'.');lg(s,`💸 ${nv} → ${na}: ${pm} CC Schmerzensgeld`)}
   lg(s,`⚡ ${na} → ${nv}: ${ok?'Erfolg':w?'vom Schild geblockt':'abgewehrt'} (${x} vs ${y})`);return{ok,txt:m}});
 // Teamname / Mitglieder (f = 'n' | 'm')
 const setTeam=(t,f,v)=>act(s=>{if(!s.nm[t])s.nm[t]={n:'',m:''};s.nm[t][f]=String(v).slice(0,f=='n'?24:140);return Y('✔ gespeichert')});
+
+// Admin: Konten
+const adjBal=(t,d)=>act(s=>{const o=bal(s,t),n=Math.max(0,o+d);s.bal[t]=n;lg(s,`💰 Spielleitung: ${nm(s,t)} ${d>0?'+':''}${d} CC (${o} → ${n})`);return Y(`✔ ${nm(s,t)}: ${fmt(n)} CC`+(o+d<0?' (nicht unter 0)':''))});
+const setBal=(t,v)=>act(s=>{const x=String(v).trim()===''?NaN:Math.floor(Number(v));if(!(x>=0)||x>1e9)return N('Bitte einen Betrag ≥ 0 eingeben.');
+  const o=bal(s,t);s.bal[t]=x;lg(s,`💰 Spielleitung: ${nm(s,t)} auf ${x} CC gesetzt (vorher ${o})`);return Y(`✔ ${nm(s,t)}: ${fmt(x)} CC`)});
+const resetBal=()=>act(s=>{for(const t of TEAMS)s.bal[t]=Math.max(0,Math.floor(s.cap));lg(s,`💰 Alle Konten auf Startkapital ${s.cap} CC gesetzt`);return Y(`✔ Alle Konten: ${fmt(s.cap)} CC`)});
+const setCap=v=>act(s=>{const x=String(v).trim()===''?NaN:Math.floor(Number(v));if(!(x>=0)||x>1e7)return N('Startkapital: Betrag ≥ 0 eingeben.');s.cap=x;return Y(`✔ Startkapital: ${fmt(x)} CC (gilt ab dem nächsten Reset)`)});
+const setRank=on=>act(s=>{s.rk=on?1:0;return Y(on?'Rangliste nach Gesamtkapital':'Feste Reihenfolge')});
 
 /* ---------- Helfer ---------- */
 const ge=g=>g.el+(g.run?Date.now()-g.run:0);
@@ -132,6 +164,6 @@ function beat(fn){   // Terminal-Heartbeat (eigener Knoten pro Gerät, verschwin
   f();setInterval(f,10000);if(ref)ref.child('tr/'+id).onDisconnect().remove();
   return f;
 }
-window.CC={PR,PM,TEAMS,DICE,PAT,SH,EVL,EVD,fresh,esc,act,init,sub:f=>{subs.push(f);f(S)},lg,sfx,nm,members,frozen,trade,craft,patent,shield,fw,raid,quote,trig,stopEv,setTeam,ge,mmss,gtime,bant,stat,pats,tick,beat,
+window.CC={PR,PM,TEAMS,DICE,PAT,SH,EVL,EVD,fresh,esc,act,init,sub:f=>{subs.push(f);f(S)},lg,sfx,nm,members,frozen,trade,craft,patent,shield,levelUp,fw,raid,quote,adjBal,setBal,resetBal,setCap,setRank,rb,rs,bal,fmt,invVal,total,ranking,LVC,PAIN,NOFUNDS,trig,stopEv,setTeam,ge,mmss,gtime,bant,stat,pats,tick,beat,
   get S(){return S},get TR(){return TR},get loaded(){return loaded}};
 })();

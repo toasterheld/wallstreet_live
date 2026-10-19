@@ -6,11 +6,15 @@
  <div class="card"><h2>A · Börsenschalter</h2>
   <div class="row"><select id="tt"></select><select id="tp"></select></div>
   <div class="row"><input id="tq" type="number" min="1" value="1" aria-label="Menge"><button id="buy" class="b-g">📈 Kauf</button><button id="sell" class="b-r">📉 Verkauf</button></div>
-  <div id="fb" class="mut" aria-live="polite">&nbsp;</div><table id="ap"></table><div class="log" id="lg"></div></div>
+  <div id="tbal" class="mut"></div><div id="fb" class="mut" aria-live="polite">&nbsp;</div><table id="ap"></table><div class="log" id="lg"></div></div>
  <div class="card"><h2>📊 Beamer-Chart</h2><button id="ar"></button><div class="seg" id="cb"></div></div>
  <div class="card"><h2>Spielzeit</h2><div class="lvl" id="agt">00:00</div>
   <div class="row"><button id="gs" class="b-g">▶ Start</button><button id="gp" class="b-o">⏸ Pause</button><button id="gr">↺ Reset</button></div>
   <label class="mut">Dauer in Min (0 = hochzählen) <input id="tl" type="number" min="0"></label><button id="rst" class="b-r">⚠ Neue Spielrunde (alles zurücksetzen)</button></div>
+ <div class="card full"><h2>💰 Team-Konten <small class="mut">(CC-Coins, nie unter 0)</small></h2>
+  <div class="accb"><label>Startkapital <input id="cap" type="number" min="0" aria-label="Startkapital"></label><button id="capb">Speichern</button>
+   <button id="rsb" class="b-o"></button><button id="rk"></button></div>
+  <div class="acc" id="accg"></div><div id="am" class="mut" aria-live="polite">&nbsp;</div></div>
  <div class="card full"><h2>C · Eilmeldungen &amp; Markt-Events <small class="mut">(jedes Event nur einmal pro Spielrunde)</small></h2>
   <div class="evg" id="evg"></div>
   <div id="ael"></div>
